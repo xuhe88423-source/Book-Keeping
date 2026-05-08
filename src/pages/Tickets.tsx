@@ -479,11 +479,11 @@ export function Tickets() {
                                         </div>
                                         
                                         {/* Middle: Quantity Control */}
-                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[110px] shrink-0 ml-2">
+                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[95px] shrink-0 ml-1">
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-8 w-8 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-destructive shrink-0"
+                                            className="h-7 w-7 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-destructive shrink-0"
                                             onClick={() => handleQuickDecrease(ticket)}
                                             disabled={ticket.quantity <= 0}
                                           >
@@ -493,7 +493,7 @@ export function Tickets() {
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-8 w-8 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-primary shrink-0"
+                                            className="h-7 w-7 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-primary shrink-0"
                                             onClick={() => handleQuickAdd(ticket)}
                                           >
                                             <Plus className="w-3.5 h-3.5" />
@@ -501,7 +501,7 @@ export function Tickets() {
                                         </div>
                                           
                                         {/* Right: Sell & Delete */}
-                                        <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                                        <div className="flex items-center gap-1 flex-1 justify-end min-w-0">
                                           <Dialog open={isSellOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
                                             setIsSellOpen(open);
                                             if (open) setSelectedTicket(ticket);
@@ -509,7 +509,7 @@ export function Tickets() {
                                           }}>
                                             <DialogTrigger
                                               render={
-                                                <Button variant="default" size="sm" className="h-8 px-8 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
+                                                <Button variant="default" size="sm" className="h-8 px-4 sm:px-6 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-1 min-w-[60px]" disabled={ticket.quantity <= 0}>
                                                   {ticket.quantity > 0 ? '售出' : '已售罄'}
                                                 </Button>
                                               }
