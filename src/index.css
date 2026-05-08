@@ -62,8 +62,6 @@
   html, body, #root {
     height: 100%;
     width: 100%;
-    overflow: hidden;
-    overscroll-behavior-y: none;
   }
   html {
     @apply font-sans;

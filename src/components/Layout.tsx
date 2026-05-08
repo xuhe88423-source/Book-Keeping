@@ -10,7 +10,7 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-background md:flex-row flex-col font-sans text-foreground">
+    <div className="flex h-[100dvh] bg-background md:flex-row flex-col font-sans text-foreground">
       {/* Sidebar for PC */}
       <aside className="hidden md:flex flex-col w-72 bg-white/70 backdrop-blur-2xl border-r border-white/20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
         <div className="p-8 pt-10">
@@ -48,11 +48,14 @@ export function Layout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4 md:p-10 pb-28 md:pb-10 relative">
-        <div className="max-w-4xl mx-auto">
+      <main className="flex-1 overflow-auto p-4 md:p-10 pb-28 md:pb-10">
+        <div className="max-w-4xl mx-auto relative h-full">
           <Outlet />
         </div>
       </main>
+
+      {/* Fade out effect at the bottom for mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-background/90 via-background/50 to-transparent pointer-events-none z-40"></div>
 
       {/* Bottom Nav for Mobile - MOZE Style */}
       <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-white/95 backdrop-blur-3xl border border-gray-100 flex justify-around p-2.5 z-50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem]">
