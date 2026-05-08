@@ -184,7 +184,7 @@ export function Dashboard() {
                   contentStyle={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}
                   itemStyle={{ color: '#111827', fontWeight: 600 }}
                 />
-                <Bar dataKey="profit" fill="var(--primary)" radius={[8, 8, 8, 8]} maxBarSize={48} />
+                <Bar dataKey="profit" fill="hsl(var(--primary))" radius={[8, 8, 8, 8]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>
