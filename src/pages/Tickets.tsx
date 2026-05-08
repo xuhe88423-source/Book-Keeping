@@ -261,7 +261,7 @@ export function Tickets() {
 
   async function handleQuickDecrease(ticket: Ticket) {
     if (ticket.quantity <= 0) {
-      toast.error('库存已为 0，无法减少');
+      toast.error('库存已为 0');
       return;
     }
     try {
@@ -271,7 +271,12 @@ export function Tickets() {
         .eq('id', ticket.id);
 
       if (error) throw error;
-      toast.success('已快速减少 1 张');
+      
+      if (ticket.quantity - 1 === 0) {
+        toast.success('票据数量为0，已自动隐藏');
+      } else {
+        toast.success('已快速减少 1 张');
+      }
       fetchData();
     } catch (error: any) {
       toast.error('减少数量失败: ' + error.message);
@@ -460,11 +465,11 @@ export function Tickets() {
                                 </Dialog>
                               </div>
 
-                              {(!pt.tickets || pt.tickets.length === 0) ? (
+                              {(!pt.tickets || pt.tickets.filter(t => t.quantity > 0).length === 0) ? (
                                 <div className="text-center py-3 text-xs text-gray-400">暂无具体优惠券记录</div>
                               ) : (
                                 <div className="flex flex-col gap-2">
-                                  {pt.tickets.map(ticket => (
+                                  {pt.tickets.filter(t => t.quantity > 0).map(ticket => (
                                     <div key={ticket.id} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
                                         
                                         {/* Left: Price */}
@@ -537,10 +542,6 @@ export function Tickets() {
                                               </form>
                                             </DialogContent>
                                           </Dialog>
-                                          
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-300 hover:text-destructive hover:bg-destructive/10 shrink-0" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
-                                              <Trash2 className="w-4 h-4" />
-                                          </Button>
                                         </div>
                                     </div>
                                   ))}
