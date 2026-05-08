@@ -45,6 +45,28 @@ export function Tickets() {
   const [editTicketCost, setEditTicketCost] = useState<{id: string, cost_price: string} | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{type: 'platform' | 'product_type' | 'ticket', id: string, name?: string} | null>(null);
 
+  // Accordion state
+  const [expandedPlatforms, setExpandedPlatforms] = useState<string[] | null>(() => {
+    const saved = localStorage.getItem('expandedPlatforms');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [expandedProducts, setExpandedProducts] = useState<string[] | null>(() => {
+    const saved = localStorage.getItem('expandedProducts');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (expandedPlatforms !== null) {
+      localStorage.setItem('expandedPlatforms', JSON.stringify(expandedPlatforms));
+    }
+  }, [expandedPlatforms]);
+
+  useEffect(() => {
+    if (expandedProducts !== null) {
+      localStorage.setItem('expandedProducts', JSON.stringify(expandedProducts));
+    }
+  }, [expandedProducts]);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -79,6 +101,19 @@ export function Tickets() {
       }
       
       setPlatforms(data || []);
+      
+      // Default expand all if not set in local storage yet
+      setExpandedPlatforms(prev => prev === null ? (data || []).map(p => p.id) : prev);
+      setExpandedProducts(prev => {
+        if (prev !== null) return prev;
+        const allProductIds: string[] = [];
+        (data || []).forEach(p => {
+          if (p.product_types) {
+            p.product_types.forEach((pt: any) => allProductIds.push(pt.id));
+          }
+        });
+        return allProductIds;
+      });
     } catch (error: any) {
       toast.error('获取库存数据失败: ' + error.message);
     } finally {
@@ -338,7 +373,7 @@ export function Tickets() {
       ) : platforms.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] font-medium border border-white/50">暂无数据，请先新增平台。</div>
       ) : (
-        <Accordion className="space-y-6" defaultValue={platforms.map(p => p.id)}>
+        <Accordion className="space-y-6" value={expandedPlatforms || []} onValueChange={setExpandedPlatforms}>
           {platforms.map((platform, idx) => {
             const theme = getPlatformTheme(idx);
             const platformTotal = getPlatformTotalQuantity(platform);
@@ -400,7 +435,7 @@ export function Tickets() {
                 {(!platform.product_types || platform.product_types.length === 0) ? (
                    <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">该平台下暂无商品类型</div>
                 ) : (
-                  <Accordion className="space-y-3" defaultValue={platform.product_types.map(pt => pt.id)}>
+                  <Accordion className="space-y-3" value={expandedProducts || []} onValueChange={setExpandedProducts}>
                     {platform.product_types.map(pt => {
                       const totalQty = getTotalQuantity(pt.tickets);
                       return (
