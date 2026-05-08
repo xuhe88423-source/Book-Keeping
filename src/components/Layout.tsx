@@ -10,58 +10,69 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50 md:flex-row flex-col">
+    <div className="flex h-screen bg-background md:flex-row flex-col font-sans text-foreground">
       {/* Sidebar for PC */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
-        <div className="p-6">
-          <h1 className="text-xl font-bold text-gray-800">记账助手</h1>
+      <aside className="hidden md:flex flex-col w-72 bg-white/70 backdrop-blur-2xl border-r border-white/20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="p-8 pt-10">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+              <Ticket className="w-5 h-5 text-white" />
+            </div>
+            记账助手
+          </h1>
         </div>
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 mt-4">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                  'flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 ease-out',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-white text-primary shadow-[0_4px_20px_rgba(0,0,0,0.05)] font-semibold scale-[1.02]'
+                    : 'text-gray-500 hover:bg-white/50 hover:text-gray-900 font-medium'
                 )
               }
             >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              <item.icon className={cn("w-5 h-5", "transition-colors")} />
+              <span className="text-[15px]">{item.label}</span>
             </NavLink>
           ))}
         </nav>
       </aside>
 
       {/* Top Header for Mobile */}
-      <header className="md:hidden bg-white border-b border-gray-200 p-4">
-        <h1 className="text-lg font-bold text-gray-800 text-center">记账助手</h1>
+      <header className="md:hidden bg-white/70 backdrop-blur-2xl border-b border-white/20 p-4 sticky top-0 z-20 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+        <h1 className="text-xl font-bold tracking-tight text-gray-900 text-center">记账助手</h1>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4 md:p-8 pb-20 md:pb-8">
-        <Outlet />
+      <main className="flex-1 overflow-auto p-4 md:p-10 pb-28 md:pb-10 relative">
+        <div className="max-w-4xl mx-auto">
+          <Outlet />
+        </div>
       </main>
 
-      {/* Bottom Nav for Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 pb-safe">
+      {/* Bottom Nav for Mobile - MOZE Style */}
+      <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-2xl border border-white/40 flex justify-around p-2.5 z-50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center gap-1 p-2 min-w-[64px] rounded-lg transition-colors',
-                isActive ? 'text-primary' : 'text-gray-500 hover:text-gray-900'
+                'flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ease-out',
+                isActive ? 'bg-primary text-white shadow-md shadow-primary/30 scale-110' : 'text-gray-400 hover:text-gray-900'
               )
             }
           >
-            <item.icon className="w-6 h-6" />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <item.icon className={cn("w-6 h-6", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
+                {!isActive && <span className="text-[10px] font-medium mt-1">{item.label}</span>}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

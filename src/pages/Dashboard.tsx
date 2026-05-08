@@ -118,29 +118,29 @@ export function Dashboard() {
       title: '今日利润',
       value: `¥${data.todayProfit.toFixed(2)}`,
       icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      iconColor: 'text-emerald-500',
+      gradient: 'bg-gradient-to-br from-emerald-50 to-teal-100/50',
     },
     {
       title: '本月利润',
       value: `¥${data.monthProfit.toFixed(2)}`,
       icon: Wallet,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      iconColor: 'text-blue-500',
+      gradient: 'bg-gradient-to-br from-blue-50 to-indigo-100/50',
     },
     {
       title: '库存总价值',
       value: `¥${data.inventoryValue.toFixed(2)}`,
       icon: CircleDollarSign,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
+      iconColor: 'text-purple-500',
+      gradient: 'bg-gradient-to-br from-purple-50 to-fuchsia-100/50',
     },
     {
       title: '库存余量',
       value: `${data.totalTickets} 张`,
       icon: Package,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
+      iconColor: 'text-amber-500',
+      gradient: 'bg-gradient-to-br from-amber-50 to-orange-100/50',
     },
   ];
 
@@ -149,38 +149,42 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">数据看板</h2>
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold tracking-tight text-gray-900">数据看板</h2>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {statCards.map((stat, i) => (
-          <Card key={i}>
-            <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
-              <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <Card key={i} className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden">
+            <CardContent className="p-6 flex flex-col items-start justify-center space-y-4">
+              <div className={`p-3.5 rounded-2xl ${stat.gradient} shadow-sm border border-white/50`}>
+                <stat.icon className={`w-6 h-6 ${stat.iconColor} stroke-[2.5px]`} />
               </div>
-              <p className="text-sm font-medium text-gray-500">{stat.title}</p>
-              <h3 className="text-2xl font-bold">{stat.value}</h3>
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
+                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{stat.value}</h3>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>近7日利润趋势</CardTitle>
+      <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem]">
+        <CardHeader className="pb-2 px-8 pt-8">
+          <CardTitle className="text-lg font-bold text-gray-800">近 7 日利润趋势</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
+        <CardContent className="px-8 pb-8">
+          <div className="h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.chartData}>
-                <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `¥${value}`} />
+              <BarChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} dy={10} fontWeight={500} />
+                <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `¥${value}`} dx={-10} fontWeight={500} />
                 <Tooltip 
                   formatter={(value: any) => [`¥${Number(value).toFixed(2)}`, '利润']}
-                  cursor={{fill: '#f3f4f6'}}
+                  cursor={{fill: 'rgba(0,0,0,0.02)', radius: 8}}
+                  contentStyle={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}
+                  itemStyle={{ color: '#111827', fontWeight: 600 }}
                 />
-                <Bar dataKey="profit" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" fill="var(--primary)" radius={[8, 8, 8, 8]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Platform, Ticket } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Tag, Store, Minus } from 'lucide-react';
+import { Plus, Tag, Store, Minus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -40,6 +40,12 @@ export function Tickets() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [sellData, setSellData] = useState({ sell_price: '', quantity: '', sold_at: new Date().toISOString().split('T')[0] });
 
+  // Edit & Delete state
+  const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
+  const [editProductType, setEditProductType] = useState<{id: string, name: string} | null>(null);
+  const [editTicketCost, setEditTicketCost] = useState<{id: string, cost_price: string} | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{type: 'platform' | 'product_type' | 'ticket', id: string, name?: string} | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -47,7 +53,6 @@ export function Tickets() {
   async function fetchData() {
     try {
       setLoading(true);
-      // Fetch nested data: platforms -> product_types -> tickets
       const { data, error } = await supabase
         .from('platforms')
         .select(`
@@ -61,7 +66,6 @@ export function Tickets() {
 
       if (error) throw error;
       
-      // Sort nested arrays
       if (data) {
         data.forEach(p => {
           if (p.product_types) {
@@ -83,6 +87,7 @@ export function Tickets() {
     }
   }
 
+  // ---- Add Handlers ----
   async function handleAddPlatform(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -135,6 +140,7 @@ export function Tickets() {
     }
   }
 
+  // ---- Sell Handler ----
   async function handleSellTicket(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedTicket) return;
@@ -176,6 +182,69 @@ export function Tickets() {
     }
   }
 
+  // ---- Edit Handlers ----
+  async function handleEditPlatform(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editPlatform) return;
+    try {
+      const { error } = await supabase.from('platforms').update({ name: editPlatform.name }).eq('id', editPlatform.id);
+      if (error) throw error;
+      toast.success('修改成功');
+      setEditPlatform(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error('修改失败: ' + error.message);
+    }
+  }
+
+  async function handleEditProductType(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editProductType) return;
+    try {
+      const { error } = await supabase.from('product_types').update({ name: editProductType.name }).eq('id', editProductType.id);
+      if (error) throw error;
+      toast.success('修改成功');
+      setEditProductType(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error('修改失败: ' + error.message);
+    }
+  }
+
+  async function handleEditTicket(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTicketCost) return;
+    try {
+      const { error } = await supabase.from('tickets').update({ cost_price: parseFloat(editTicketCost.cost_price) }).eq('id', editTicketCost.id);
+      if (error) throw error;
+      toast.success('成本价修改成功');
+      setEditTicketCost(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error('修改失败: ' + error.message);
+    }
+  }
+
+  // ---- Delete Handler ----
+  async function handleDelete() {
+    if (!deleteConfirm) return;
+    try {
+      let table = '';
+      if (deleteConfirm.type === 'platform') table = 'platforms';
+      else if (deleteConfirm.type === 'product_type') table = 'product_types';
+      else if (deleteConfirm.type === 'ticket') table = 'tickets';
+
+      const { error } = await supabase.from(table).delete().eq('id', deleteConfirm.id);
+      if (error) throw error;
+      toast.success('删除成功');
+      setDeleteConfirm(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error('删除失败: ' + error.message);
+    }
+  }
+
+  // ---- Quick Adjust Handlers ----
   async function handleQuickAdd(ticket: Ticket) {
     try {
       const { error } = await supabase
@@ -210,56 +279,78 @@ export function Tickets() {
     }
   }
 
-  // Calculate total quantity for a product type
   const getTotalQuantity = (tickets?: Ticket[]) => {
     if (!tickets) return 0;
     return tickets.reduce((sum, t) => sum + t.quantity, 0);
   };
 
+  const getPlatformColor = (index: number) => {
+    const colors = [
+      'bg-gradient-to-br from-blue-500 to-indigo-600',
+      'bg-gradient-to-br from-emerald-400 to-teal-500',
+      'bg-gradient-to-br from-rose-400 to-red-500',
+      'bg-gradient-to-br from-amber-400 to-orange-500',
+      'bg-gradient-to-br from-purple-500 to-fuchsia-600',
+    ];
+    return colors[index % colors.length];
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-10">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">票据库存</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">票据库存</h2>
         
         <Dialog open={isAddPlatformOpen} onOpenChange={setIsAddPlatformOpen}>
           <DialogTrigger
             render={
-              <Button className="gap-2">
+              <Button className="gap-2 rounded-full shadow-lg shadow-primary/20 px-5 font-semibold">
                 <Plus className="w-4 h-4" />
                 新增平台
               </Button>
             }
           />
-          <DialogContent>
+          <DialogContent className="rounded-3xl border-none shadow-2xl">
             <DialogHeader>
-              <DialogTitle>新增平台</DialogTitle>
+              <DialogTitle className="text-xl">新增平台</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddPlatform} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">平台名称</label>
-                <Input required placeholder="如：淘宝、美团" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} />
+            <form onSubmit={handleAddPlatform} className="space-y-5 mt-2">
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">平台名称</label>
+                <Input required placeholder="如：淘宝、美团" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
               </div>
-              <Button type="submit" className="w-full">保存</Button>
+              <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-500">加载中...</div>
+        <div className="text-center py-20 text-gray-400 font-medium">加载中...</div>
       ) : platforms.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">暂无数据，请先新增平台。</div>
+        <div className="text-center py-20 text-gray-400 bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] font-medium border border-white/50">暂无数据，请先新增平台。</div>
       ) : (
-        <Accordion className="space-y-4" defaultValue={platforms.map(p => p.id)}>
-          {platforms.map(platform => (
-            <AccordionItem value={platform.id} key={platform.id} className="bg-white border rounded-lg px-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline py-4">
-                <div className="flex items-center gap-2 text-lg font-bold text-gray-800">
-                  <Store className="w-5 h-5 text-primary" />
-                  {platform.name}
+        <Accordion type="multiple" className="space-y-6" defaultValue={platforms.map(p => p.id)}>
+          {platforms.map((platform, idx) => (
+            <AccordionItem value={platform.id} key={platform.id} className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-5 px-6">
+                <div className="flex justify-between items-center w-full pr-2">
+                  <div className="flex items-center gap-4 text-xl font-bold text-gray-900 tracking-tight">
+                    <div className={`w-12 h-12 ${getPlatformColor(idx)} rounded-[1.25rem] flex items-center justify-center shadow-inner`}>
+                      <Store className="w-6 h-6 text-white" />
+                    </div>
+                    {platform.name}
+                  </div>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditPlatform({id: platform.id, name: platform.name})}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'platform', id: platform.id, name: platform.name})}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-4 space-y-4">
+              <AccordionContent className="pt-2 pb-6 px-6 space-y-6 border-t border-gray-100/50 mt-2">
                 
                 <div className="flex justify-end">
                   <Dialog open={isAddProductTypeOpen && selectedPlatformId === platform.id} onOpenChange={(open) => {
@@ -268,48 +359,58 @@ export function Tickets() {
                   }}>
                     <DialogTrigger
                       render={
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="secondary" size="sm" className="gap-2 rounded-full shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-700">
                           <Plus className="w-4 h-4" />
                           新增商品类型
                         </Button>
                       }
                     />
-                    <DialogContent>
+                    <DialogContent className="rounded-3xl border-none shadow-2xl">
                       <DialogHeader>
-                        <DialogTitle>新增商品类型 - {platform.name}</DialogTitle>
+                        <DialogTitle className="text-xl">新增商品类型 - {platform.name}</DialogTitle>
                       </DialogHeader>
-                      <form onSubmit={handleAddProductType} className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">商品名称</label>
-                          <Input required placeholder="如：100元代金券" value={newProductTypeName} onChange={e => setNewProductTypeName(e.target.value)} />
+                      <form onSubmit={handleAddProductType} className="space-y-5 mt-2">
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium text-gray-700">商品名称</label>
+                          <Input required placeholder="如：100元代金券" value={newProductTypeName} onChange={e => setNewProductTypeName(e.target.value)} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                         </div>
-                        <Button type="submit" className="w-full">保存</Button>
+                        <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
                 </div>
 
                 {(!platform.product_types || platform.product_types.length === 0) ? (
-                   <div className="text-center py-4 text-sm text-gray-500">该平台下暂无商品类型</div>
+                   <div className="text-center py-6 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">该平台下暂无商品类型</div>
                 ) : (
-                  <Accordion className="space-y-3" defaultValue={platform.product_types.map(pt => pt.id)}>
+                  <Accordion type="multiple" className="space-y-3" defaultValue={platform.product_types.map(pt => pt.id)}>
                     {platform.product_types.map(pt => {
                       const totalQty = getTotalQuantity(pt.tickets);
                       return (
-                        <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50 border border-gray-100 rounded-md px-4">
-                          <AccordionTrigger className="hover:no-underline py-3">
-                            <div className="flex justify-between items-center w-full pr-4">
-                              <div className="flex items-center gap-2 font-semibold text-gray-700">
-                                <Tag className="w-4 h-4 text-blue-500" />
+                        <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-[1.5rem] px-5 overflow-hidden shadow-sm">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex justify-between items-center w-full pr-2">
+                              <div className="flex items-center gap-3 font-semibold text-gray-800 text-lg">
+                                <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-xl">
+                                  <Tag className="w-4 h-4" />
+                                </div>
                                 {pt.name}
                               </div>
-                              <div className="text-sm font-normal text-gray-500 bg-gray-200 px-2 py-1 rounded-md">
-                                总库存: <span className="font-bold text-gray-800">{totalQty}</span>
+                              <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="text-sm font-medium text-gray-600 bg-white shadow-sm px-3 py-1 rounded-full border border-gray-100">
+                                  总计: <span className="font-bold text-gray-900">{totalQty}</span>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditProductType({id: pt.id, name: pt.name})}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'product_type', id: pt.id, name: pt.name})}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="pt-2 pb-3">
-                            <div className="space-y-3">
+                          <AccordionContent className="pt-2 pb-5">
+                            <div className="space-y-4">
                               
                               <div className="flex justify-end">
                                 <Dialog open={isAddTicketOpen && selectedProductTypeId === pt.id} onOpenChange={(open) => {
@@ -318,65 +419,74 @@ export function Tickets() {
                                 }}>
                                   <DialogTrigger
                                     render={
-                                      <Button variant="secondary" size="sm" className="gap-1 h-7 text-xs">
+                                      <Button variant="outline" size="sm" className="gap-1 h-8 text-xs rounded-full border-gray-200 bg-white shadow-sm font-medium">
                                         <Plus className="w-3 h-3" />
                                         添加具体优惠券
                                       </Button>
                                     }
                                   />
-                                  <DialogContent>
+                                  <DialogContent className="rounded-3xl border-none shadow-2xl">
                                     <DialogHeader>
-                                      <DialogTitle>添加优惠券 - {pt.name}</DialogTitle>
+                                      <DialogTitle className="text-xl">添加优惠券 - {pt.name}</DialogTitle>
                                     </DialogHeader>
-                                    <form onSubmit={handleAddTicket} className="space-y-4">
+                                    <form onSubmit={handleAddTicket} className="space-y-5 mt-2">
                                       <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">成本价 (元)</label>
-                                          <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} />
+                                        <div className="space-y-3">
+                                          <label className="text-sm font-medium text-gray-700">成本价 (元)</label>
+                                          <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                         </div>
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">初始数量</label>
-                                          <Input required type="number" min="1" value={newTicket.quantity} onChange={e => setNewTicket({...newTicket, quantity: e.target.value})} />
+                                        <div className="space-y-3">
+                                          <label className="text-sm font-medium text-gray-700">初始数量</label>
+                                          <Input required type="number" min="1" value={newTicket.quantity} onChange={e => setNewTicket({...newTicket, quantity: e.target.value})} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                         </div>
                                       </div>
-                                      <Button type="submit" className="w-full">保存</Button>
+                                      <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
                                     </form>
                                   </DialogContent>
                                 </Dialog>
                               </div>
 
                               {(!pt.tickets || pt.tickets.length === 0) ? (
-                                <div className="text-center py-2 text-xs text-gray-400">暂无具体优惠券记录</div>
+                                <div className="text-center py-4 text-xs text-gray-400">暂无具体优惠券记录</div>
                               ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                   {pt.tickets.map(ticket => (
-                                    <Card key={ticket.id} className="shadow-sm border-gray-200">
-                                      <CardContent className="p-3">
-                                        <div className="flex justify-between items-center mb-3">
-                                          <div className="text-sm font-medium text-gray-500">
-                                            成本: <span className="text-gray-900 font-bold text-lg">¥{ticket.cost_price.toFixed(2)}</span>
+                                    <Card key={ticket.id} className="shadow-[0_8px_20px_rgba(0,0,0,0.03)] border border-gray-100 rounded-[1.5rem] bg-white overflow-hidden">
+                                      <CardContent className="p-5">
+                                        <div className="flex justify-between items-center mb-5">
+                                          <div className="flex items-center gap-2">
+                                            <div className="text-sm font-medium text-gray-500">
+                                              成本: <span className="text-gray-900 font-extrabold text-2xl ml-1 tracking-tight">¥{ticket.cost_price.toFixed(2)}</span>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
+                                              <Pencil className="w-3 h-3" />
+                                            </Button>
                                           </div>
-                                          <div className="text-sm flex items-center gap-1">
-                                            剩余: 
+                                          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
+                                              <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center mb-4 bg-gray-50 p-2 rounded-xl">
+                                          <span className="text-sm text-gray-500 font-medium ml-2">库存剩余</span>
+                                          <div className="text-sm flex items-center">
                                             <Button 
                                               variant="ghost" 
                                               size="icon" 
-                                              className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-600 ml-1"
+                                              className="h-7 w-7 rounded-full hover:bg-white hover:shadow-sm hover:text-destructive"
                                               onClick={() => handleQuickDecrease(ticket)}
-                                              title="快速减少1张"
                                               disabled={ticket.quantity <= 0}
                                             >
-                                              <Minus className="w-3 h-3" />
+                                              <Minus className="w-3.5 h-3.5" />
                                             </Button>
-                                            <span className="font-bold text-gray-900 min-w-[20px] text-center">{ticket.quantity}</span>
+                                            <span className="font-bold text-gray-900 min-w-[32px] text-center text-lg">{ticket.quantity}</span>
                                             <Button 
                                               variant="ghost" 
                                               size="icon" 
-                                              className="h-6 w-6 rounded-full hover:bg-blue-50 hover:text-blue-600"
+                                              className="h-7 w-7 rounded-full hover:bg-white hover:shadow-sm hover:text-primary"
                                               onClick={() => handleQuickAdd(ticket)}
-                                              title="快速增加1张"
                                             >
-                                              <Plus className="w-3 h-3" />
+                                              <Plus className="w-3.5 h-3.5" />
                                             </Button>
                                           </div>
                                         </div>
@@ -388,12 +498,12 @@ export function Tickets() {
                                         }}>
                                           <DialogTrigger
                                             render={
-                                              <Button variant="default" className="w-full" size="sm" disabled={ticket.quantity <= 0}>
+                                              <Button variant="default" className="w-full rounded-xl font-semibold" disabled={ticket.quantity <= 0}>
                                                 {ticket.quantity > 0 ? '售出' : '已售罄'}
                                               </Button>
                                             }
                                           />
-                                          <DialogContent>
+                                          <DialogContent className="rounded-2xl sm:rounded-3xl">
                                             <DialogHeader>
                                               <DialogTitle>售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
                                             </DialogHeader>
@@ -401,18 +511,18 @@ export function Tickets() {
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                   <label className="text-sm font-medium">卖出单价 (元)</label>
-                                                  <Input required type="number" step="0.01" value={sellData.sell_price} onChange={e => setSellData({...sellData, sell_price: e.target.value})} />
+                                                  <Input required type="number" step="0.01" value={sellData.sell_price} onChange={e => setSellData({...sellData, sell_price: e.target.value})} className="rounded-xl" />
                                                 </div>
                                                 <div className="space-y-2">
                                                   <label className="text-sm font-medium">售出数量 (最多 {ticket.quantity})</label>
-                                                  <Input required type="number" min="1" max={ticket.quantity} value={sellData.quantity} onChange={e => setSellData({...sellData, quantity: e.target.value})} />
+                                                  <Input required type="number" min="1" max={ticket.quantity} value={sellData.quantity} onChange={e => setSellData({...sellData, quantity: e.target.value})} className="rounded-xl" />
                                                 </div>
                                               </div>
                                               <div className="space-y-2">
                                                 <label className="text-sm font-medium">售出日期</label>
-                                                <Input required type="date" value={sellData.sold_at} onChange={e => setSellData({...sellData, sold_at: e.target.value})} />
+                                                <Input required type="date" value={sellData.sold_at} onChange={e => setSellData({...sellData, sold_at: e.target.value})} className="rounded-xl" />
                                               </div>
-                                              <Button type="submit" className="w-full">确认售出</Button>
+                                              <Button type="submit" className="w-full rounded-full">确认售出</Button>
                                             </form>
                                           </DialogContent>
                                         </Dialog>
@@ -433,6 +543,59 @@ export function Tickets() {
           ))}
         </Accordion>
       )}
+
+      {/* Edit Platform Dialog */}
+      <Dialog open={!!editPlatform} onOpenChange={(open) => !open && setEditPlatform(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl">
+          <DialogHeader><DialogTitle>修改平台名称</DialogTitle></DialogHeader>
+          <form onSubmit={handleEditPlatform} className="space-y-4">
+            <Input required value={editPlatform?.name || ''} onChange={e => setEditPlatform(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl" />
+            <Button type="submit" className="w-full rounded-full">保存</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Type Dialog */}
+      <Dialog open={!!editProductType} onOpenChange={(open) => !open && setEditProductType(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl">
+          <DialogHeader><DialogTitle>修改商品名称</DialogTitle></DialogHeader>
+          <form onSubmit={handleEditProductType} className="space-y-4">
+            <Input required value={editProductType?.name || ''} onChange={e => setEditProductType(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl" />
+            <Button type="submit" className="w-full rounded-full">保存</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Ticket Cost Dialog */}
+      <Dialog open={!!editTicketCost} onOpenChange={(open) => !open && setEditTicketCost(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl">
+          <DialogHeader><DialogTitle>修改成本价</DialogTitle></DialogHeader>
+          <form onSubmit={handleEditTicket} className="space-y-4">
+            <Input required type="number" step="0.01" min="0" value={editTicketCost?.cost_price || ''} onChange={e => setEditTicketCost(prev => prev ? {...prev, cost_price: e.target.value} : null)} className="rounded-xl" />
+            <Button type="submit" className="w-full rounded-full">保存</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl border-destructive/20">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">确认删除?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-gray-600">
+            {deleteConfirm?.type === 'platform' && `您即将删除平台 "${deleteConfirm.name}"。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！`}
+            {deleteConfirm?.type === 'product_type' && `您即将删除商品 "${deleteConfirm.name}"。此操作将同时永久删除该商品下的所有优惠券库存以及关联的售出明细记录！`}
+            {deleteConfirm?.type === 'ticket' && `您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！`}
+            <p className="mt-2 font-bold text-gray-900">此操作不可恢复，是否继续？</p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-full">取消</Button>
+            <Button variant="destructive" onClick={handleDelete} className="rounded-full">确认删除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
