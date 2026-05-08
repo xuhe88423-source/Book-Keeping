@@ -472,7 +472,7 @@ export function Tickets() {
                                         <div className="flex flex-col shrink-0 min-w-[70px]">
                                           <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
                                           <div className="flex items-center gap-0.5">
-                                            <span className="text-gray-900 font-bold text-sm tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
+                                            <span className="text-gray-900 font-bold text-base tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
                                             <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
                                               <Pencil className="w-2.5 h-2.5" />
                                             </Button>
@@ -480,11 +480,11 @@ export function Tickets() {
                                         </div>
                                         
                                         {/* Middle: Quantity Control */}
-                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full border border-gray-100/50 w-[100px] shrink-0">
+                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[110px] shrink-0 ml-2">
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-destructive shrink-0"
+                                            className="h-8 w-8 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-destructive shrink-0"
                                             onClick={() => handleQuickDecrease(ticket)}
                                             disabled={ticket.quantity <= 0}
                                           >
@@ -494,7 +494,7 @@ export function Tickets() {
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-primary shrink-0"
+                                            className="h-8 w-8 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-primary shrink-0"
                                             onClick={() => handleQuickAdd(ticket)}
                                           >
                                             <Plus className="w-3.5 h-3.5" />
@@ -510,7 +510,7 @@ export function Tickets() {
                                           }}>
                                             <DialogTrigger
                                               render={
-                                                <Button variant="default" size="sm" className="h-8 px-4 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
+                                                <Button variant="default" size="sm" className="h-8 px-5 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
                                                   {ticket.quantity > 0 ? '售出' : '已售罄'}
                                                 </Button>
                                               }
