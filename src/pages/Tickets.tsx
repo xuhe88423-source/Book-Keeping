@@ -330,11 +330,11 @@ export function Tickets() {
 
   const getPlatformTheme = (index: number) => {
     const themes = [
-      { icon: 'bg-gradient-to-br from-blue-500 to-indigo-600', card: 'bg-blue-50/40 border-blue-100/50' },
-      { icon: 'bg-gradient-to-br from-emerald-400 to-teal-500', card: 'bg-emerald-50/40 border-emerald-100/50' },
-      { icon: 'bg-gradient-to-br from-rose-400 to-red-500', card: 'bg-rose-50/40 border-rose-100/50' },
-      { icon: 'bg-gradient-to-br from-amber-400 to-orange-500', card: 'bg-amber-50/40 border-amber-100/50' },
-      { icon: 'bg-gradient-to-br from-purple-500 to-fuchsia-600', card: 'bg-purple-50/40 border-purple-100/50' },
+      { icon: 'bg-gradient-to-br from-blue-500 to-indigo-600', card: 'bg-blue-100/90 border-blue-200/80', dot: 'bg-blue-500', text: 'text-blue-900', countBg: 'bg-blue-200/50' },
+      { icon: 'bg-gradient-to-br from-emerald-400 to-teal-500', card: 'bg-emerald-100/90 border-emerald-200/80', dot: 'bg-emerald-500', text: 'text-emerald-900', countBg: 'bg-emerald-200/50' },
+      { icon: 'bg-gradient-to-br from-rose-400 to-red-500', card: 'bg-rose-100/90 border-rose-200/80', dot: 'bg-rose-500', text: 'text-rose-900', countBg: 'bg-rose-200/50' },
+      { icon: 'bg-gradient-to-br from-amber-400 to-orange-500', card: 'bg-amber-100/90 border-amber-200/80', dot: 'bg-amber-500', text: 'text-amber-900', countBg: 'bg-amber-200/50' },
+      { icon: 'bg-gradient-to-br from-purple-500 to-fuchsia-600', card: 'bg-purple-100/90 border-purple-200/80', dot: 'bg-purple-500', text: 'text-purple-900', countBg: 'bg-purple-200/50' },
     ];
     return themes[index % themes.length];
   };

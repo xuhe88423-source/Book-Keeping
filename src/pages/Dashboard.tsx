@@ -12,7 +12,7 @@ interface DashboardData {
   inventoryValue: number;
   totalTickets: number;
   chartData: { date: string; profit: number }[];
-  platformStats: { id: string; name: string; count: number }[];
+  platformStats: { id: string; name: string; count: number; originalIndex: number }[];
 }
 
 export function Dashboard() {
@@ -54,10 +54,10 @@ export function Dashboard() {
 
       let invValue = 0;
       let totalQty = 0;
-      const platformStats: { id: string; name: string; count: number }[] = [];
+      const platformStats: { id: string; name: string; count: number; originalIndex: number }[] = [];
 
       if (platformsData) {
-        platformsData.forEach((platform: any) => {
+        platformsData.forEach((platform: any, index: number) => {
           let platformTotal = 0;
           if (platform.product_types) {
             platform.product_types.forEach((pt: any) => {
@@ -70,7 +70,7 @@ export function Dashboard() {
               }
             });
           }
-          platformStats.push({ id: platform.id, name: platform.name, count: platformTotal });
+          platformStats.push({ id: platform.id, name: platform.name, count: platformTotal, originalIndex: index });
         });
       }
 
@@ -183,6 +183,17 @@ export function Dashboard() {
     navigate('/tickets');
   };
 
+  const getPlatformTheme = (index: number) => {
+    const themes = [
+      { card: 'bg-blue-100/90 border-blue-200/80', dot: 'bg-blue-500', text: 'text-blue-900', countBg: 'bg-blue-200/50' },
+      { card: 'bg-emerald-100/90 border-emerald-200/80', dot: 'bg-emerald-500', text: 'text-emerald-900', countBg: 'bg-emerald-200/50' },
+      { card: 'bg-rose-100/90 border-rose-200/80', dot: 'bg-rose-500', text: 'text-rose-900', countBg: 'bg-rose-200/50' },
+      { card: 'bg-amber-100/90 border-amber-200/80', dot: 'bg-amber-500', text: 'text-amber-900', countBg: 'bg-amber-200/50' },
+      { card: 'bg-purple-100/90 border-purple-200/80', dot: 'bg-purple-500', text: 'text-purple-900', countBg: 'bg-purple-200/50' },
+    ];
+    return themes[index % themes.length];
+  };
+
   if (loading) {
     return <div className="text-center py-10 text-gray-500">加载中...</div>;
   }
@@ -198,21 +209,23 @@ export function Dashboard() {
           <div className="text-sm text-gray-400">暂无平台数据</div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-            {data.platformStats.map((stat, i) => (
+            {data.platformStats.map((stat, i) => {
+              const theme = getPlatformTheme(stat.originalIndex);
+              return (
               <div 
                 key={i} 
                 onClick={() => handlePlatformClick(stat.id)}
-                className="bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3"
+                className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${theme.card}`}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary/80 shadow-sm"></div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-700 truncate">{stat.name}</span>
+                  <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${theme.dot}`}></div>
+                  <span className={`text-sm sm:text-base font-semibold truncate ${theme.text}`}>{stat.name}</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                  {stat.count} <span className="text-xs sm:text-sm font-medium text-gray-500 ml-0.5">张</span>
+                <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${theme.text}`}>
+                  {stat.count} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
