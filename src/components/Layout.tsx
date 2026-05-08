@@ -10,7 +10,7 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background md:flex-row flex-col font-sans text-foreground">
+    <div className="flex h-full w-full overflow-hidden bg-background md:flex-row flex-col font-sans text-foreground">
       {/* Sidebar for PC */}
       <aside className="hidden md:flex flex-col w-72 bg-white/70 backdrop-blur-2xl border-r border-white/20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
         <div className="p-8 pt-10">
