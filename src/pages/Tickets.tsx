@@ -464,51 +464,53 @@ export function Tickets() {
                               {(!pt.tickets || pt.tickets.length === 0) ? (
                                 <div className="text-center py-3 text-xs text-gray-400">暂无具体优惠券记录</div>
                               ) : (
-                                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                   {pt.tickets.map(ticket => (
                                     <Card key={ticket.id} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden flex flex-col">
                                       <CardContent className="p-2.5 flex-1 flex flex-col">
                                         
-                                        {/* Row 1: Cost & Delete */}
-                                        <div className="flex justify-between items-start mb-2">
-                                          <div className="flex flex-col">
+                                        {/* Row 1: Content Container */}
+                                        <div className="flex items-center justify-between flex-1 gap-2">
+                                          {/* Left: Price */}
+                                          <div className="flex flex-col min-w-0">
                                             <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
                                             <div className="flex items-center gap-0.5">
-                                              <span className="text-gray-900 font-bold text-sm tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
-                                              <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 -mt-0.5" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
+                                              <span className="text-gray-900 font-bold text-base tracking-tight leading-none truncate">¥{ticket.cost_price.toFixed(2)}</span>
+                                              <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
                                                 <Pencil className="w-2.5 h-2.5" />
                                               </Button>
                                             </div>
                                           </div>
-                                          <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
-                                              <Trash2 className="w-3 h-3" />
-                                          </Button>
-                                        </div>
-                                        
-                                        {/* Row 2: Quantity Control */}
-                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-lg border border-gray-100/50 mb-2">
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 rounded-md hover:bg-white hover:shadow-sm hover:text-destructive"
-                                            onClick={() => handleQuickDecrease(ticket)}
-                                            disabled={ticket.quantity <= 0}
-                                          >
-                                            <Minus className="w-3 h-3" />
-                                          </Button>
-                                          <span className="font-bold text-gray-900 flex-1 text-center text-sm">{ticket.quantity}</span>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 rounded-md hover:bg-white hover:shadow-sm hover:text-primary"
-                                            onClick={() => handleQuickAdd(ticket)}
-                                          >
-                                            <Plus className="w-3 h-3" />
-                                          </Button>
+                                          
+                                          {/* Right: Quantity Control */}
+                                          <div className="flex items-center bg-gray-50/80 p-0.5 rounded-lg border border-gray-100/50 shrink-0">
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-6 w-6 rounded-md hover:bg-white hover:shadow-sm hover:text-destructive"
+                                              onClick={() => handleQuickDecrease(ticket)}
+                                              disabled={ticket.quantity <= 0}
+                                            >
+                                              <Minus className="w-3 h-3" />
+                                            </Button>
+                                            <span className="font-bold text-gray-900 w-6 text-center text-sm">{ticket.quantity}</span>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-6 w-6 rounded-md hover:bg-white hover:shadow-sm hover:text-primary"
+                                              onClick={() => handleQuickAdd(ticket)}
+                                            >
+                                              <Plus className="w-3 h-3" />
+                                            </Button>
+                                          </div>
                                         </div>
                                           
-                                        {/* Row 3: Sell Button */}
-                                        <div className="mt-auto pt-1">
+                                        {/* Row 2: Sell Button */}
+                                        <div className="mt-2.5 pt-2.5 border-t border-gray-100/60 flex items-center justify-between gap-2">
+                                          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-gray-300 hover:text-destructive hover:bg-destructive/10 shrink-0" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
+                                              <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                          
                                           <Dialog open={isSellOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
                                             setIsSellOpen(open);
                                             if (open) setSelectedTicket(ticket);
@@ -516,7 +518,7 @@ export function Tickets() {
                                           }}>
                                             <DialogTrigger
                                               render={
-                                                <Button variant="default" size="sm" className="w-full h-7 rounded-lg font-semibold text-[11px] shadow-sm" disabled={ticket.quantity <= 0}>
+                                                <Button variant="default" size="sm" className="flex-1 h-7 rounded-lg font-semibold text-[11px] shadow-sm" disabled={ticket.quantity <= 0}>
                                                   {ticket.quantity > 0 ? '售出' : '已售罄'}
                                                 </Button>
                                               }
