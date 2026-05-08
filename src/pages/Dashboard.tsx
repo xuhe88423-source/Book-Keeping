@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet, TrendingUp, Package, CircleDollarSign } from 'lucide-react';
@@ -11,10 +12,11 @@ interface DashboardData {
   inventoryValue: number;
   totalTickets: number;
   chartData: { date: string; profit: number }[];
-  platformStats: { name: string; count: number }[];
+  platformStats: { id: string; name: string; count: number }[];
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData>({
     todayProfit: 0,
     monthProfit: 0,
@@ -40,6 +42,7 @@ export function Dashboard() {
       const { data: platformsData } = await supabase
         .from('platforms')
         .select(`
+          id,
           name,
           product_types (
             tickets (
@@ -51,7 +54,7 @@ export function Dashboard() {
 
       let invValue = 0;
       let totalQty = 0;
-      const platformStats: { name: string; count: number }[] = [];
+      const platformStats: { id: string; name: string; count: number }[] = [];
 
       if (platformsData) {
         platformsData.forEach((platform: any) => {
@@ -67,7 +70,7 @@ export function Dashboard() {
               }
             });
           }
-          platformStats.push({ name: platform.name, count: platformTotal });
+          platformStats.push({ id: platform.id, name: platform.name, count: platformTotal });
         });
       }
 
@@ -174,6 +177,12 @@ export function Dashboard() {
     },
   ];
 
+  const handlePlatformClick = (platformId: string) => {
+    // Save to localStorage so Tickets page will expand it automatically
+    localStorage.setItem('expandedPlatforms', JSON.stringify([platformId]));
+    navigate('/tickets');
+  };
+
   if (loading) {
     return <div className="text-center py-10 text-gray-500">加载中...</div>;
   }
@@ -181,6 +190,32 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       <h2 className="text-3xl font-bold tracking-tight text-gray-900">数据看板</h2>
+
+      {/* 平台库存分布（顶置） */}
+      <div>
+        <h3 className="text-lg font-bold text-gray-800 mb-3">平台分布</h3>
+        {data.platformStats.length === 0 ? (
+          <div className="text-sm text-gray-400">暂无平台数据</div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+            {data.platformStats.map((stat, i) => (
+              <div 
+                key={i} 
+                onClick={() => handlePlatformClick(stat.id)}
+                className="bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary/80 shadow-sm"></div>
+                  <span className="text-sm sm:text-base font-semibold text-gray-700 truncate">{stat.name}</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                  {stat.count} <span className="text-xs sm:text-sm font-medium text-gray-500 ml-0.5">张</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {statCards.map((stat, i) => (
@@ -198,8 +233,8 @@ export function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card className="lg:col-span-2 border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem]">
+      <div className="grid grid-cols-1 gap-5">
+        <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem]">
           <CardHeader className="pb-2 px-6 pt-6 sm:px-8 sm:pt-8">
             <CardTitle className="text-lg font-bold text-gray-800">近 7 日利润趋势</CardTitle>
           </CardHeader>
@@ -219,31 +254,6 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] flex flex-col">
-          <CardHeader className="pb-2 px-6 pt-6 sm:px-8 sm:pt-8">
-            <CardTitle className="text-lg font-bold text-gray-800">平台库存分布</CardTitle>
-          </CardHeader>
-          <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8 flex-1 flex flex-col">
-            {data.platformStats.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
-                暂无平台数据
-              </div>
-            ) : (
-              <div className="space-y-4 mt-2">
-                {data.platformStats.map((stat, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary/80"></div>
-                      <span className="text-sm font-medium text-gray-700">{stat.name}</span>
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 bg-gray-100/80 px-2.5 py-0.5 rounded-md">{stat.count} 张</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
