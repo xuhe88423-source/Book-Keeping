@@ -284,15 +284,20 @@ export function Tickets() {
     return tickets.reduce((sum, t) => sum + t.quantity, 0);
   };
 
-  const getPlatformColor = (index: number) => {
-    const colors = [
-      'bg-gradient-to-br from-blue-500 to-indigo-600',
-      'bg-gradient-to-br from-emerald-400 to-teal-500',
-      'bg-gradient-to-br from-rose-400 to-red-500',
-      'bg-gradient-to-br from-amber-400 to-orange-500',
-      'bg-gradient-to-br from-purple-500 to-fuchsia-600',
+  const getPlatformTotalQuantity = (platform: Platform) => {
+    if (!platform.product_types) return 0;
+    return platform.product_types.reduce((sum, pt) => sum + getTotalQuantity(pt.tickets), 0);
+  };
+
+  const getPlatformTheme = (index: number) => {
+    const themes = [
+      { icon: 'bg-gradient-to-br from-blue-500 to-indigo-600', card: 'bg-blue-50/40 border-blue-100/50' },
+      { icon: 'bg-gradient-to-br from-emerald-400 to-teal-500', card: 'bg-emerald-50/40 border-emerald-100/50' },
+      { icon: 'bg-gradient-to-br from-rose-400 to-red-500', card: 'bg-rose-50/40 border-rose-100/50' },
+      { icon: 'bg-gradient-to-br from-amber-400 to-orange-500', card: 'bg-amber-50/40 border-amber-100/50' },
+      { icon: 'bg-gradient-to-br from-purple-500 to-fuchsia-600', card: 'bg-purple-50/40 border-purple-100/50' },
     ];
-    return colors[index % colors.length];
+    return themes[index % themes.length];
   };
 
   return (
@@ -330,23 +335,31 @@ export function Tickets() {
         <div className="text-center py-20 text-gray-400 bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] font-medium border border-white/50">暂无数据，请先新增平台。</div>
       ) : (
         <Accordion className="space-y-6" defaultValue={platforms.map(p => p.id)}>
-          {platforms.map((platform, idx) => (
-            <AccordionItem value={platform.id} key={platform.id} className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          {platforms.map((platform, idx) => {
+            const theme = getPlatformTheme(idx);
+            const platformTotal = getPlatformTotalQuantity(platform);
+            return (
+            <AccordionItem value={platform.id} key={platform.id} className={`backdrop-blur-xl border rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ${theme.card}`}>
               <AccordionTrigger className="hover:no-underline py-5 px-6">
                 <div className="flex justify-between items-center w-full pr-2">
                   <div className="flex items-center gap-4 text-xl font-bold text-gray-900 tracking-tight">
-                    <div className={`w-12 h-12 ${getPlatformColor(idx)} rounded-[1.25rem] flex items-center justify-center shadow-inner`}>
+                    <div className={`w-12 h-12 ${theme.icon} rounded-[1.25rem] flex items-center justify-center shadow-inner`}>
                       <Store className="w-6 h-6 text-white" />
                     </div>
                     {platform.name}
                   </div>
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditPlatform({id: platform.id, name: platform.name})}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'platform', id: platform.id, name: platform.name})}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="text-sm font-medium text-gray-600 bg-white/60 shadow-sm px-3 py-1.5 rounded-full border border-white/80">
+                      总计: <span className="font-bold text-gray-900">{platformTotal}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditPlatform({id: platform.id, name: platform.name})}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'platform', id: platform.id, name: platform.name})}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -540,7 +553,8 @@ export function Tickets() {
                 )}
               </AccordionContent>
             </AccordionItem>
-          ))}
+            );
+          })}
         </Accordion>
       )}
 
