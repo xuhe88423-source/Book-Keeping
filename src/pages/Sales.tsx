@@ -23,11 +23,11 @@ interface SaleWithDetails {
   tickets: {
     quantity: number;
     cost_price: number;
-    product_types: {
+    global_products: {
       name: string;
-      platforms: {
-        name: string;
-      };
+    };
+    platforms: {
+      name: string;
     };
   };
 }
@@ -53,11 +53,11 @@ export function Sales() {
           tickets (
             quantity,
             cost_price,
-            product_types (
-              name,
-              platforms (
-                name
-              )
+            global_products (
+              name
+            ),
+            platforms (
+              name
             )
           )
         `)
@@ -148,11 +148,11 @@ export function Sales() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="bg-primary/10 text-primary text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                          {sale.tickets?.product_types?.platforms?.name}
+                          {sale.tickets?.platforms?.name}
                         </span>
                         <span className="text-xs text-gray-400 font-medium">{sale.sold_at}</span>
                       </div>
-                      <span className="font-extrabold text-xl text-gray-900 tracking-tight">{sale.tickets?.product_types?.name}</span>
+                      <span className="font-extrabold text-xl text-gray-900 tracking-tight">{sale.tickets?.global_products?.name}</span>
                     </div>
                     <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-gray-400 hover:text-orange-500 hover:bg-orange-50 -mr-2 shadow-sm border border-gray-100 bg-white" onClick={() => setUndoConfirm(sale)}>
                       <Undo2 className="w-4 h-4" />
@@ -205,9 +205,9 @@ export function Sales() {
                     <td className="p-6">
                       <div className="flex items-center gap-2.5">
                         <span className="bg-primary/10 text-primary text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                          {sale.tickets?.product_types?.platforms?.name}
+                          {sale.tickets?.platforms?.name}
                         </span>
-                        <span className="font-extrabold text-gray-900 text-base">{sale.tickets?.product_types?.name}</span>
+                        <span className="font-extrabold text-gray-900 text-base">{sale.tickets?.global_products?.name}</span>
                       </div>
                     </td>
                     <td className="p-6 text-gray-500 font-medium">¥{sale.tickets?.cost_price.toFixed(2)}</td>
@@ -239,7 +239,7 @@ export function Sales() {
             <DialogTitle className="text-orange-600 text-xl">确认撤销该笔售出?</DialogTitle>
           </DialogHeader>
           <div className="py-4 text-gray-600 leading-relaxed">
-            <p>您即将撤销售出 <strong className="text-gray-900">{undoConfirm?.tickets?.product_types?.name}</strong> 共 <strong className="text-gray-900">{undoConfirm?.quantity}</strong> 张。</p>
+            <p>您即将撤销售出 <strong className="text-gray-900">{undoConfirm?.tickets?.global_products?.name}</strong> 共 <strong className="text-gray-900">{undoConfirm?.quantity}</strong> 张。</p>
             <p className="mt-3 text-sm bg-orange-50 text-orange-700 p-4 rounded-2xl border border-orange-100/50">撤销后，该笔记录将被删除，对应的利润会扣除，且 {undoConfirm?.quantity} 张库存将自动退回。</p>
           </div>
           <div className="flex justify-end gap-3 mt-2">

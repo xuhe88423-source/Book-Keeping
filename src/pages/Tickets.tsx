@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Platform, Ticket } from '@/types';
+import type { Platform, Ticket, GlobalProduct } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Plus, Tag, Store, Minus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,31 +21,18 @@ import {
 
 export function Tickets() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [globalProducts, setGlobalProducts] = useState<GlobalProduct[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Forms state
   const [isAddPlatformOpen, setIsAddPlatformOpen] = useState(false);
   const [newPlatformName, setNewPlatformName] = useState('');
 
-  const [isAddProductTypeOpen, setIsAddProductTypeOpen] = useState(false);
-  const [selectedPlatformId, setSelectedPlatformId] = useState<string | null>(null);
-  const [newProductTypeName, setNewProductTypeName] = useState('');
-
   const [isAddTicketOpen, setIsAddTicketOpen] = useState(false);
-  const [selectedProductTypeId, setSelectedProductTypeId] = useState<string | null>(null);
+  const [selectedPlatformId, setSelectedPlatformId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [newTicket, setNewTicket] = useState({ cost_price: '', quantity: '' });
-
-  const [isSellOpen, setIsSellOpen] = useState(false);
-  const [selectedProductForSell, setSelectedProductForSell] = useState<{ 
-    id: string; 
-    name: string; 
-    crossPlatformTickets: { ticket: Ticket; platformName: string; productTypeId: string }[] 
-  } | null>(null);
-  const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
-    total_price: '',
-    quantities: {},
-    sold_at: new Date().toISOString().split('T')[0]
-  });
 
   // Edit & Delete state
   const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
@@ -82,46 +69,23 @@ export function Tickets() {
   async function fetchData() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('platforms')
-        .select(`
-          *,
-          product_types (
-            *,
-            tickets (*)
-          )
-        `)
-        .order('created_at', { ascending: true });
+      const [platformsRes, productsRes, ticketsRes] = await Promise.all([
+        supabase.from('platforms').select('*').order('created_at', { ascending: true }),
+        supabase.from('global_products').select('*').order('created_at', { ascending: true }),
+        supabase.from('tickets').select('*').order('created_at', { ascending: true })
+      ]);
 
-      if (error) throw error;
+      if (platformsRes.error) throw platformsRes.error;
+      if (productsRes.error) throw productsRes.error;
+      if (ticketsRes.error) throw ticketsRes.error;
       
-      if (data) {
-        data.forEach(p => {
-          if (p.product_types) {
-            p.product_types.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            p.product_types.forEach((pt: any) => {
-              if (pt.tickets) {
-                pt.tickets.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-              }
-            });
-          }
-        });
-      }
-      
-      setPlatforms(data || []);
+      setPlatforms(platformsRes.data || []);
+      setGlobalProducts(productsRes.data || []);
+      setTickets(ticketsRes.data || []);
       
       // Default expand all if not set in local storage yet
-      setExpandedPlatforms(prev => prev === null ? (data || []).map(p => p.id) : prev);
-      setExpandedProducts(prev => {
-        if (prev !== null) return prev;
-        const allProductIds: string[] = [];
-        (data || []).forEach(p => {
-          if (p.product_types) {
-            p.product_types.forEach((pt: any) => allProductIds.push(pt.id));
-          }
-        });
-        return allProductIds;
-      });
+      setExpandedPlatforms(prev => prev === null ? (platformsRes.data || []).map(p => p.id) : prev);
+      setExpandedProducts(prev => prev === null ? (productsRes.data || []).map(pt => pt.id) : prev);
     } catch (error: any) {
       toast.error('获取库存数据失败: ' + error.message);
     } finally {
@@ -144,30 +108,14 @@ export function Tickets() {
     }
   }
 
-  async function handleAddProductType(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedPlatformId) return;
-    try {
-      const { error } = await supabase.from('product_types').insert([
-        { platform_id: selectedPlatformId, name: newProductTypeName }
-      ]);
-      if (error) throw error;
-      toast.success('商品类型创建成功');
-      setIsAddProductTypeOpen(false);
-      setNewProductTypeName('');
-      fetchData();
-    } catch (error: any) {
-      toast.error('创建失败: ' + error.message);
-    }
-  }
-
   async function handleAddTicket(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedProductTypeId) return;
+    if (!selectedPlatformId || !selectedProductId) return;
     try {
       const { error } = await supabase.from('tickets').insert([
         {
-          product_type_id: selectedProductTypeId,
+          platform_id: selectedPlatformId,
+          global_product_id: selectedProductId,
           cost_price: parseFloat(newTicket.cost_price),
           quantity: parseInt(newTicket.quantity),
         }
@@ -179,79 +127,6 @@ export function Tickets() {
       fetchData();
     } catch (error: any) {
       toast.error('添加失败: ' + error.message);
-    }
-  }
-
-  // ---- Sell Handler ----
-  async function handleSellTicket(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedProductForSell) return;
-
-    const totalSellPrice = parseFloat(batchSellData.total_price);
-    if (isNaN(totalSellPrice) || totalSellPrice < 0) {
-      toast.error('请输入有效的总售价');
-      return;
-    }
-
-    const ticketsToSell = Object.entries(batchSellData.quantities).filter(([_, qty]) => qty > 0);
-    if (ticketsToSell.length === 0) {
-      toast.error('请至少选择一张优惠券进行售出');
-      return;
-    }
-
-    let totalQty = 0;
-    const saleRecords: any[] = [];
-    const ticketUpdates: { id: string; currentQty: number; sellQty: number; cost_price: number }[] = [];
-
-    // Validate quantities and gather data
-    for (const [ticketId, sellQty] of ticketsToSell) {
-      const crossItem = selectedProductForSell.crossPlatformTickets.find(item => item.ticket.id === ticketId);
-      if (!crossItem) continue;
-      const ticket = crossItem.ticket;
-      
-      if (sellQty > ticket.quantity) {
-        toast.error(`售出数量不能大于库存数量 (平台 ${crossItem.platformName}, 成本 ¥${ticket.cost_price})`);
-        return;
-      }
-      
-      totalQty += sellQty;
-      ticketUpdates.push({ id: ticket.id, currentQty: ticket.quantity, sellQty, cost_price: ticket.cost_price });
-    }
-
-    const avgSellPrice = totalSellPrice / totalQty;
-
-    try {
-      for (const update of ticketUpdates) {
-        const profit = (avgSellPrice - update.cost_price) * update.sellQty;
-
-        saleRecords.push({
-          ticket_id: update.id,
-          sell_price: avgSellPrice,
-          quantity: update.sellQty,
-          profit: profit,
-          sold_at: batchSellData.sold_at,
-        });
-      }
-
-      // 1. Insert all sales records
-      const { error: saleError } = await supabase.from('sales').insert(saleRecords);
-      if (saleError) throw saleError;
-
-      // 2. Update all ticket quantities
-      for (const update of ticketUpdates) {
-        const { error: ticketError } = await supabase
-          .from('tickets')
-          .update({ quantity: update.currentQty - update.sellQty })
-          .eq('id', update.id);
-        if (ticketError) throw ticketError;
-      }
-
-      toast.success('批量售出记录添加成功');
-      setIsSellOpen(false);
-      setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
-      fetchData();
-    } catch (error: any) {
-      toast.error('售出失败: ' + error.message);
     }
   }
 
@@ -274,7 +149,7 @@ export function Tickets() {
     e.preventDefault();
     if (!editProductType) return;
     try {
-      const { error } = await supabase.from('product_types').update({ name: editProductType.name }).eq('id', editProductType.id);
+      const { error } = await supabase.from('global_products').update({ name: editProductType.name }).eq('id', editProductType.id);
       if (error) throw error;
       toast.success('修改成功');
       setEditProductType(null);
@@ -304,7 +179,7 @@ export function Tickets() {
     try {
       let table = '';
       if (deleteConfirm.type === 'platform') table = 'platforms';
-      else if (deleteConfirm.type === 'product_type') table = 'product_types';
+      else if (deleteConfirm.type === 'product_type') table = 'global_products';
       else if (deleteConfirm.type === 'ticket') table = 'tickets';
 
       const { error } = await supabase.from(table).delete().eq('id', deleteConfirm.id);
@@ -357,14 +232,12 @@ export function Tickets() {
     }
   }
 
-  const getTotalQuantity = (tickets?: Ticket[]) => {
-    if (!tickets) return 0;
-    return tickets.reduce((sum, t) => sum + t.quantity, 0);
+  const getPlatformTotalQuantity = (platformId: string) => {
+    return tickets.filter(t => t.platform_id === platformId).reduce((sum, t) => sum + t.quantity, 0);
   };
 
-  const getPlatformTotalQuantity = (platform: Platform) => {
-    if (!platform.product_types) return 0;
-    return platform.product_types.reduce((sum, pt) => sum + getTotalQuantity(pt.tickets), 0);
+  const getProductTicketsInPlatform = (platformId: string, productId: string) => {
+    return tickets.filter(t => t.platform_id === platformId && t.global_product_id === productId);
   };
 
   const getPlatformTheme = (index: number) => {
@@ -415,7 +288,7 @@ export function Tickets() {
         <Accordion className="space-y-6" value={expandedPlatforms || []} onValueChange={setExpandedPlatforms}>
           {platforms.map((platform, idx) => {
             const theme = getPlatformTheme(idx);
-            const platformTotal = getPlatformTotalQuantity(platform);
+            const platformTotal = getPlatformTotalQuantity(platform.id);
             return (
             <AccordionItem value={platform.id} key={platform.id} className={`backdrop-blur-xl border rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ${theme.card}`}>
               <AccordionTrigger className="hover:no-underline py-5 px-6">
@@ -442,41 +315,14 @@ export function Tickets() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pt-2 pb-6 px-6 space-y-6 border-t border-gray-100/50 mt-2">
-                
-                <div className="flex justify-end">
-                  <Dialog open={isAddProductTypeOpen && selectedPlatformId === platform.id} onOpenChange={(open) => {
-                    setIsAddProductTypeOpen(open);
-                    if (open) setSelectedPlatformId(platform.id);
-                  }}>
-                    <DialogTrigger
-                      render={
-                        <Button variant="secondary" size="sm" className="gap-2 rounded-full shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-700">
-                          <Plus className="w-4 h-4" />
-                          新增商品类型
-                        </Button>
-                      }
-                    />
-                    <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
-                      <DialogHeader>
-                        <DialogTitle className="text-gray-900">新增商品类型 - {platform.name}</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddProductType} className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">商品名称</label>
-                          <Input required placeholder="如：100元代金券" value={newProductTypeName} onChange={e => setNewProductTypeName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
-                        </div>
-                        <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
 
-                {(!platform.product_types || platform.product_types.length === 0) ? (
-                   <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">该平台下暂无商品类型</div>
+                {globalProducts.length === 0 ? (
+                   <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">暂无全局商品，请在数据看板中创建</div>
                 ) : (
                   <Accordion className="space-y-3" value={expandedProducts || []} onValueChange={setExpandedProducts}>
-                    {platform.product_types.map(pt => {
-                      const totalQty = getTotalQuantity(pt.tickets);
+                    {globalProducts.map(pt => {
+                      const ptTickets = getProductTicketsInPlatform(platform.id, pt.id);
+                      const totalQty = ptTickets.reduce((sum, t) => sum + t.quantity, 0);
                       return (
                         <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-2xl px-3 sm:px-4 overflow-hidden shadow-sm">
                           <AccordionTrigger className="hover:no-underline py-3">
@@ -506,97 +352,12 @@ export function Tickets() {
                             <div className="space-y-3">
                               
                               <div className="flex justify-end gap-2">
-                                <Dialog open={isSellOpen && selectedProductForSell?.id === pt.id} onOpenChange={(open) => {
-                                  setIsSellOpen(open);
-                                  if (open) {
-                                    const crossPlatformTickets: { ticket: Ticket; platformName: string; productTypeId: string }[] = [];
-                                    platforms.forEach(p => {
-                                      p.product_types?.forEach(otherPt => {
-                                        if (otherPt.name === pt.name) {
-                                          otherPt.tickets?.forEach(t => {
-                                            crossPlatformTickets.push({
-                                              ticket: t,
-                                              platformName: p.name,
-                                              productTypeId: otherPt.id
-                                            });
-                                          });
-                                        }
-                                      });
-                                    });
-
-                                    setSelectedProductForSell({ id: pt.id, name: pt.name, crossPlatformTickets });
-                                    setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
-                                  } else {
-                                    setSelectedProductForSell(null);
-                                  }
-                                }}>
-                                  <DialogTrigger
-                                    render={
-                                      <Button variant="default" size="sm" className="gap-1 h-7 text-xs rounded-lg shadow-sm font-medium px-4">
-                                        售出
-                                      </Button>
-                                    }
-                                  />
-                                  <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-gray-900">批量售出 - {pt.name}</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={handleSellTicket} className="space-y-5 mt-2">
-                                      
-                                      <div className="space-y-3">
-                                        <label className="text-sm font-medium text-gray-700">选择要售出的票据</label>
-                                        <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                                          {(selectedProductForSell?.crossPlatformTickets || []).filter(item => item.ticket.quantity > 0).map(item => (
-                                            <div key={item.ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
-                                              <div className="flex flex-col">
-                                                <span className="text-xs font-semibold text-primary/80 mb-1">{item.platformName}</span>
-                                                <span className="text-xs text-gray-400">成本价</span>
-                                                <span className="font-bold text-gray-900">¥{item.ticket.cost_price.toFixed(2)}</span>
-                                                <span className="text-xs text-gray-500 mt-0.5">库存: {item.ticket.quantity}</span>
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <label className="text-xs font-medium text-gray-500">售出</label>
-                                                <Input 
-                                                  type="number" 
-                                                  min="0" 
-                                                  max={item.ticket.quantity} 
-                                                  value={batchSellData.quantities[item.ticket.id] || ''} 
-                                                  onChange={e => {
-                                                    const val = parseInt(e.target.value) || 0;
-                                                    setBatchSellData(prev => ({
-                                                      ...prev,
-                                                      quantities: { ...prev.quantities, [item.ticket.id]: val }
-                                                    }));
-                                                  }} 
-                                                  className="w-20 rounded-lg h-9 bg-white text-center" 
-                                                />
-                                              </div>
-                                            </div>
-                                          ))}
-                                          {(selectedProductForSell?.crossPlatformTickets || []).filter(item => item.ticket.quantity > 0).length === 0 && (
-                                            <div className="text-center py-4 text-sm text-gray-400">没有可售出的库存</div>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-gray-700">总售价 (元)</label>
-                                          <Input required type="number" step="0.01" min="0" value={batchSellData.total_price} onChange={e => setBatchSellData({...batchSellData, total_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary font-bold text-lg" placeholder="输入这批总价" />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-gray-700">售出日期</label>
-                                          <Input required type="date" value={batchSellData.sold_at} onChange={e => setBatchSellData({...batchSellData, sold_at: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
-                                        </div>
-                                      </div>
-                                      <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">确认售出</Button>
-                                    </form>
-                                  </DialogContent>
-                                </Dialog>
-
-                                <Dialog open={isAddTicketOpen && selectedProductTypeId === pt.id} onOpenChange={(open) => {
+                                <Dialog open={isAddTicketOpen && selectedPlatformId === platform.id && selectedProductId === pt.id} onOpenChange={(open) => {
                                   setIsAddTicketOpen(open);
-                                  if (open) setSelectedProductTypeId(pt.id);
+                                  if (open) {
+                                    setSelectedPlatformId(platform.id);
+                                    setSelectedProductId(pt.id);
+                                  }
                                 }}>
                                   <DialogTrigger
                                     render={
@@ -627,11 +388,11 @@ export function Tickets() {
                                 </Dialog>
                               </div>
 
-                              {(!pt.tickets || pt.tickets.filter(t => t.quantity > 0).length === 0) ? (
+                              {ptTickets.filter(t => t.quantity > 0).length === 0 ? (
                                 <div className="text-center py-3 text-xs text-gray-400">暂无具体优惠券记录</div>
                               ) : (
                                 <div className="flex flex-col gap-2">
-                                  {pt.tickets.filter(t => t.quantity > 0).map(ticket => (
+                                  {ptTickets.filter(t => t.quantity > 0).map(ticket => (
                                     <div key={ticket.id} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
                                         
                                         {/* Left: Price */}

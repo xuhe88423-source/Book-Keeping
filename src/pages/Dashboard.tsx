@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, TrendingUp, Package, CircleDollarSign } from 'lucide-react';
+import { Wallet, TrendingUp, Package, CircleDollarSign, Plus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, format, subDays } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { Ticket } from '@/types';
 
 export interface GlobalProduct {
+  id: string;
   name: string;
   totalQuantity: number;
   originalIndex: number;
   platformDetails: {
+    platformId: string;
     platformName: string;
-    productTypeId: string;
     tickets: Ticket[];
   }[];
 }
@@ -45,6 +46,8 @@ export function Dashboard() {
   const [selectedProduct, setSelectedProduct] = useState<GlobalProduct | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
   const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
     total_price: '',
     quantities: {},
@@ -55,6 +58,20 @@ export function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  async function handleAddProduct(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('global_products').insert([{ name: newProductName }]);
+      if (error) throw error;
+      toast.success('商品创建成功');
+      setIsAddProductOpen(false);
+      setNewProductName('');
+      fetchDashboardData();
+    } catch (error: any) {
+      toast.error('创建失败: ' + error.message);
+    }
+  }
+
   async function fetchDashboardData() {
     try {
       setLoading(true);
@@ -62,65 +79,64 @@ export function Dashboard() {
       const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
 
-      // 1. Fetch platforms with tickets for inventory stats
-      const { data: platformsData } = await supabase
-        .from('platforms')
+      // 1. Fetch global products and their tickets
+      const { data: globalProductsData } = await supabase
+        .from('global_products')
         .select(`
           id,
           name,
-          product_types (
+          tickets (
             id,
-            name,
-            tickets (
+            cost_price,
+            quantity,
+            created_at,
+            platforms (
               id,
-              cost_price,
-              quantity,
-              created_at
+              name
             )
           )
         `);
 
       let invValue = 0;
       let totalQty = 0;
-      const productMap = new Map<string, GlobalProduct>();
+      const globalProducts: GlobalProduct[] = [];
 
-      if (platformsData) {
-        platformsData.forEach((platform: any) => {
-          if (platform.product_types) {
-            platform.product_types.forEach((pt: any) => {
-              if (pt.tickets) {
-                let ptTotal = 0;
-                pt.tickets.forEach((t: any) => {
-                  invValue += t.quantity * t.cost_price;
-                  totalQty += t.quantity;
-                  ptTotal += t.quantity;
-                });
+      if (globalProductsData) {
+        globalProductsData.forEach((gp: any, index: number) => {
+          let gpTotalQty = 0;
+          const platformMap = new Map<string, { platformId: string; platformName: string; tickets: Ticket[] }>();
 
-                if (ptTotal > 0 || pt.tickets.length > 0) {
-                  if (!productMap.has(pt.name)) {
-                    productMap.set(pt.name, {
-                      name: pt.name,
-                      totalQuantity: 0,
-                      originalIndex: productMap.size,
-                      platformDetails: []
-                    });
-                  }
-                  
-                  const gProd = productMap.get(pt.name)!;
-                  gProd.totalQuantity += ptTotal;
-                  gProd.platformDetails.push({
-                    platformName: platform.name,
-                    productTypeId: pt.id,
-                    tickets: pt.tickets
+          if (gp.tickets) {
+            gp.tickets.forEach((t: any) => {
+              invValue += t.quantity * t.cost_price;
+              totalQty += t.quantity;
+              gpTotalQty += t.quantity;
+
+              if (t.platforms) {
+                const pid = t.platforms.id;
+                if (!platformMap.has(pid)) {
+                  platformMap.set(pid, {
+                    platformId: pid,
+                    platformName: t.platforms.name,
+                    tickets: []
                   });
                 }
+                platformMap.get(pid)!.tickets.push(t);
               }
             });
           }
+
+          globalProducts.push({
+            id: gp.id,
+            name: gp.name,
+            totalQuantity: gpTotalQty,
+            originalIndex: index,
+            platformDetails: Array.from(platformMap.values())
+          });
         });
       }
 
-      const globalProducts = Array.from(productMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
+      globalProducts.sort((a, b) => b.totalQuantity - a.totalQuantity);
 
       // 2. Fetch sales for profit stats (this month)
       const { data: sales } = await supabase
@@ -324,7 +340,31 @@ export function Dashboard() {
 
       {/* 商品全局聚合分布（顶置） */}
       <div>
-        <h3 className="text-lg font-bold text-gray-800 mb-3">商品全局聚合</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-bold text-gray-800">商品全局聚合</h3>
+          <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+            <DialogTrigger
+              render={
+                <Button variant="secondary" size="sm" className="gap-1.5 rounded-full shadow-sm bg-primary/10 hover:bg-primary/20 text-primary font-bold">
+                  <Plus className="w-4 h-4" />
+                  新增商品
+                </Button>
+              }
+            />
+            <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">新增全局商品</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddProduct} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">商品名称</label>
+                  <Input required placeholder="如：100元代金券" value={newProductName} onChange={e => setNewProductName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                </div>
+                <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
         {data.globalProducts.length === 0 ? (
           <div className="text-sm text-gray-400">暂无商品数据</div>
         ) : (
