@@ -36,8 +36,12 @@ export function Tickets() {
   const [newTicket, setNewTicket] = useState({ cost_price: '', quantity: '' });
 
   const [isSellOpen, setIsSellOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [sellData, setSellData] = useState({ sell_price: '', quantity: '', sold_at: new Date().toISOString().split('T')[0] });
+  const [selectedProductForSell, setSelectedProductForSell] = useState<{ id: string, name: string, tickets: Ticket[] } | null>(null);
+  const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
+    total_price: '',
+    quantities: {},
+    sold_at: new Date().toISOString().split('T')[0]
+  });
 
   // Edit & Delete state
   const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
@@ -177,39 +181,70 @@ export function Tickets() {
   // ---- Sell Handler ----
   async function handleSellTicket(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTicket) return;
+    if (!selectedProductForSell) return;
 
-    const sellQty = parseInt(sellData.quantity);
-    if (sellQty > selectedTicket.quantity) {
-      toast.error('售出数量不能大于库存数量');
+    const totalSellPrice = parseFloat(batchSellData.total_price);
+    if (isNaN(totalSellPrice) || totalSellPrice < 0) {
+      toast.error('请输入有效的总售价');
       return;
     }
 
-    try {
-      const sellPrice = parseFloat(sellData.sell_price);
-      const profit = (sellPrice - selectedTicket.cost_price) * sellQty;
+    const ticketsToSell = Object.entries(batchSellData.quantities).filter(([_, qty]) => qty > 0);
+    if (ticketsToSell.length === 0) {
+      toast.error('请至少选择一张优惠券进行售出');
+      return;
+    }
 
-      const { error: saleError } = await supabase.from('sales').insert([
-        {
-          ticket_id: selectedTicket.id,
-          sell_price: sellPrice,
-          quantity: sellQty,
+    let totalQty = 0;
+    const saleRecords: any[] = [];
+    const ticketUpdates: { id: string; currentQty: number; sellQty: number }[] = [];
+
+    // Validate quantities and gather data
+    for (const [ticketId, sellQty] of ticketsToSell) {
+      const ticket = selectedProductForSell.tickets.find(t => t.id === ticketId);
+      if (!ticket) continue;
+      
+      if (sellQty > ticket.quantity) {
+        toast.error(`售出数量不能大于库存数量 (成本 ¥${ticket.cost_price})`);
+        return;
+      }
+      
+      totalQty += sellQty;
+      ticketUpdates.push({ id: ticket.id, currentQty: ticket.quantity, sellQty });
+    }
+
+    const avgSellPrice = totalSellPrice / totalQty;
+
+    try {
+      for (const update of ticketUpdates) {
+        const ticket = selectedProductForSell.tickets.find(t => t.id === update.id)!;
+        const profit = (avgSellPrice - ticket.cost_price) * update.sellQty;
+
+        saleRecords.push({
+          ticket_id: ticket.id,
+          sell_price: avgSellPrice,
+          quantity: update.sellQty,
           profit: profit,
-          sold_at: sellData.sold_at,
-        },
-      ]);
+          sold_at: batchSellData.sold_at,
+        });
+      }
+
+      // 1. Insert all sales records
+      const { error: saleError } = await supabase.from('sales').insert(saleRecords);
       if (saleError) throw saleError;
 
-      const { error: ticketError } = await supabase
-        .from('tickets')
-        .update({ quantity: selectedTicket.quantity - sellQty })
-        .eq('id', selectedTicket.id);
-        
-      if (ticketError) throw ticketError;
+      // 2. Update all ticket quantities
+      for (const update of ticketUpdates) {
+        const { error: ticketError } = await supabase
+          .from('tickets')
+          .update({ quantity: update.currentQty - update.sellQty })
+          .eq('id', update.id);
+        if (ticketError) throw ticketError;
+      }
 
-      toast.success('售出记录添加成功');
+      toast.success('批量售出记录添加成功');
       setIsSellOpen(false);
-      setSellData({ sell_price: '', quantity: '', sold_at: new Date().toISOString().split('T')[0] });
+      setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
       fetchData();
     } catch (error: any) {
       toast.error('售出失败: ' + error.message);
@@ -466,7 +501,79 @@ export function Tickets() {
                           <AccordionContent className="pt-1 pb-4">
                             <div className="space-y-3">
                               
-                              <div className="flex justify-end">
+                              <div className="flex justify-end gap-2">
+                                <Dialog open={isSellOpen && selectedProductForSell?.id === pt.id} onOpenChange={(open) => {
+                                  setIsSellOpen(open);
+                                  if (open) {
+                                    setSelectedProductForSell({ id: pt.id, name: pt.name, tickets: pt.tickets || [] });
+                                    setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
+                                  } else {
+                                    setSelectedProductForSell(null);
+                                  }
+                                }}>
+                                  <DialogTrigger
+                                    render={
+                                      <Button variant="default" size="sm" className="gap-1 h-7 text-xs rounded-lg shadow-sm font-medium px-4">
+                                        售出
+                                      </Button>
+                                    }
+                                  />
+                                  <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-gray-900">批量售出 - {pt.name}</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleSellTicket} className="space-y-5 mt-2">
+                                      
+                                      <div className="space-y-3">
+                                        <label className="text-sm font-medium text-gray-700">选择要售出的票据</label>
+                                        <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                                          {(pt.tickets || []).filter(t => t.quantity > 0).map(ticket => (
+                                            <div key={ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                                              <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400">成本价</span>
+                                                <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
+                                                <span className="text-xs text-gray-500 mt-0.5">库存: {ticket.quantity}</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <label className="text-xs font-medium text-gray-500">售出</label>
+                                                <Input 
+                                                  type="number" 
+                                                  min="0" 
+                                                  max={ticket.quantity} 
+                                                  value={batchSellData.quantities[ticket.id] || ''} 
+                                                  onChange={e => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    setBatchSellData(prev => ({
+                                                      ...prev,
+                                                      quantities: { ...prev.quantities, [ticket.id]: val }
+                                                    }));
+                                                  }} 
+                                                  className="w-20 rounded-lg h-9 bg-white text-center" 
+                                                />
+                                              </div>
+                                            </div>
+                                          ))}
+                                          {(pt.tickets || []).filter(t => t.quantity > 0).length === 0 && (
+                                            <div className="text-center py-4 text-sm text-gray-400">没有可售出的库存</div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-gray-700">总售价 (元)</label>
+                                          <Input required type="number" step="0.01" min="0" value={batchSellData.total_price} onChange={e => setBatchSellData({...batchSellData, total_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary font-bold text-lg" placeholder="输入这批总价" />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-gray-700">售出日期</label>
+                                          <Input required type="date" value={batchSellData.sold_at} onChange={e => setBatchSellData({...batchSellData, sold_at: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                                        </div>
+                                      </div>
+                                      <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">确认售出</Button>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+
                                 <Dialog open={isAddTicketOpen && selectedProductTypeId === pt.id} onOpenChange={(open) => {
                                   setIsAddTicketOpen(open);
                                   if (open) setSelectedProductTypeId(pt.id);
@@ -542,41 +649,6 @@ export function Tickets() {
                                           
                                         {/* Right: Sell & Delete */}
                                         <div className="flex items-center gap-1 flex-1 justify-end min-w-0">
-                                          <Dialog open={isSellOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
-                                            setIsSellOpen(open);
-                                            if (open) setSelectedTicket(ticket);
-                                            else setSelectedTicket(null);
-                                          }}>
-                                            <DialogTrigger
-                                              render={
-                                                <Button variant="default" size="sm" className="h-8 px-4 sm:px-6 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-1 min-w-[60px]" disabled={ticket.quantity <= 0}>
-                                                  {ticket.quantity > 0 ? '售出' : '已售罄'}
-                                                </Button>
-                                              }
-                                            />
-                                            <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
-                                              <DialogHeader>
-                                                <DialogTitle className="text-gray-900">售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
-                                              </DialogHeader>
-                                              <form onSubmit={handleSellTicket} className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                  <div className="space-y-2">
-                                                    <label className="text-sm font-medium">卖出单价 (元)</label>
-                                                    <Input required type="number" step="0.01" value={sellData.sell_price} onChange={e => setSellData({...sellData, sell_price: e.target.value})} className="rounded-xl" />
-                                                  </div>
-                                                  <div className="space-y-2">
-                                                    <label className="text-sm font-medium">售出数量 (最多 {ticket.quantity})</label>
-                                                    <Input required type="number" min="1" max={ticket.quantity} value={sellData.quantity} onChange={e => setSellData({...sellData, quantity: e.target.value})} className="rounded-xl" />
-                                                  </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                  <label className="text-sm font-medium">售出日期</label>
-                                                  <Input required type="date" value={sellData.sold_at} onChange={e => setSellData({...sellData, sold_at: e.target.value})} className="rounded-xl" />
-                                                </div>
-                                                <Button type="submit" className="w-full rounded-full">确认售出</Button>
-                                              </form>
-                                            </DialogContent>
-                                          </Dialog>
                                         </div>
                                     </div>
                                   ))}
