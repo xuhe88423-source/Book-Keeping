@@ -510,7 +510,7 @@ export function Tickets() {
                                           }}>
                                             <DialogTrigger
                                               render={
-                                                <Button variant="default" size="sm" className="h-8 px-5 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
+                                                <Button variant="default" size="sm" className="h-8 px-8 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
                                                   {ticket.quantity > 0 ? '售出' : '已售罄'}
                                                 </Button>
                                               }
