@@ -494,35 +494,50 @@ export function Dashboard() {
             
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">选择要售出的票据</label>
-              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                {selectedProduct?.platformDetails.map(p => 
-                  p.tickets.filter(t => t.quantity > 0).map(ticket => (
-                  <div key={ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-primary/80 mb-1">{p.platformName}</span>
-                      <span className="text-xs text-gray-400">成本价</span>
-                      <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
-                      <span className="text-xs text-gray-500 mt-0.5">库存: {ticket.quantity}</span>
+              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+                {selectedProduct?.platformDetails.map((p, pIndex) => {
+                  const availableTickets = p.tickets.filter(t => t.quantity > 0);
+                  if (availableTickets.length === 0) return null;
+                  
+                  // Use the same theme logic as the Dashboard cards
+                  const theme = getPlatformTheme(pIndex);
+                  
+                  return (
+                  <div key={p.platformId} className={`rounded-xl border p-3 ${theme.card}`}>
+                    <div className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.text}`}>
+                      <div className={`w-2 h-2 rounded-full ${theme.dot}`}></div>
+                      {p.platformName}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-500">售出</label>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        max={ticket.quantity} 
-                        value={batchSellData.quantities[ticket.id] || ''} 
-                        onChange={e => {
-                          const val = parseInt(e.target.value) || 0;
-                          setBatchSellData(prev => ({
-                            ...prev,
-                            quantities: { ...prev.quantities, [ticket.id]: val }
-                          }));
-                        }} 
-                        className="w-20 rounded-lg h-9 bg-white text-center" 
-                      />
+                    <div className="space-y-2">
+                      {availableTickets.map(ticket => (
+                        <div key={ticket.id} className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-500">成本价</span>
+                            <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
+                            <span className="text-[10px] text-gray-500 mt-0.5">库存: {ticket.quantity}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-medium text-gray-500">售出</label>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              max={ticket.quantity} 
+                              value={batchSellData.quantities[ticket.id] || ''} 
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 0;
+                                setBatchSellData(prev => ({
+                                  ...prev,
+                                  quantities: { ...prev.quantities, [ticket.id]: val }
+                                }));
+                              }} 
+                              className="w-20 rounded-md h-8 bg-white text-center border-white/50" 
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )))}
+                )})}
               </div>
             </div>
 
