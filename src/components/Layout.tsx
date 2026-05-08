@@ -55,18 +55,18 @@ export function Layout() {
       </main>
 
       {/* Fade out effect at the bottom for mobile */}
-      <div className="md:hidden absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-40"></div>
+      <div className="md:hidden absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none z-40"></div>
 
-      {/* Bottom Nav for Mobile - MOZE Style */}
-      <nav className="md:hidden absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-3xl border border-gray-100 flex justify-around p-2.5 z-50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem]">
+      {/* Bottom Nav for Mobile - Docked to bottom */}
+      <nav className="md:hidden absolute bottom-0 left-0 right-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200/50 flex justify-around pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] px-2 z-50">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ease-out',
-                isActive ? 'bg-primary text-white shadow-[0_4px_12px_rgba(37,99,235,0.4)] scale-[1.05]' : 'text-gray-400 hover:text-gray-800 hover:bg-gray-50'
+                'flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all duration-300 ease-out',
+                isActive ? 'text-primary scale-[1.05]' : 'text-gray-400 hover:text-gray-800'
               )
             }
           >
