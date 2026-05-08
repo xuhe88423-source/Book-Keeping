@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet, TrendingUp, Package, CircleDollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, format, subDays } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import type { Ticket } from '@/types';
+
+export interface GlobalProduct {
+  name: string;
+  totalQuantity: number;
+  originalIndex: number;
+  platformDetails: {
+    platformName: string;
+    productTypeId: string;
+    tickets: Ticket[];
+  }[];
+}
 
 interface DashboardData {
   todayProfit: number;
@@ -12,20 +27,29 @@ interface DashboardData {
   inventoryValue: number;
   totalTickets: number;
   chartData: { date: string; profit: number }[];
-  platformStats: { id: string; name: string; count: number; originalIndex: number }[];
+  globalProducts: GlobalProduct[];
 }
 
 export function Dashboard() {
-  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData>({
     todayProfit: 0,
     monthProfit: 0,
     inventoryValue: 0,
     totalTickets: 0,
     chartData: [],
-    platformStats: []
+    globalProducts: []
   });
   const [loading, setLoading] = useState(true);
+
+  // Cross-platform sell states
+  const [selectedProduct, setSelectedProduct] = useState<GlobalProduct | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isSellOpen, setIsSellOpen] = useState(false);
+  const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
+    total_price: '',
+    quantities: {},
+    sold_at: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -45,37 +69,58 @@ export function Dashboard() {
           id,
           name,
           product_types (
+            id,
+            name,
             tickets (
+              id,
+              cost_price,
               quantity,
-              cost_price
+              created_at
             )
           )
         `);
 
       let invValue = 0;
       let totalQty = 0;
-      const platformStats: { id: string; name: string; count: number; originalIndex: number }[] = [];
+      const productMap = new Map<string, GlobalProduct>();
 
       if (platformsData) {
-        platformsData.forEach((platform: any, index: number) => {
-          let platformTotal = 0;
+        platformsData.forEach((platform: any) => {
           if (platform.product_types) {
             platform.product_types.forEach((pt: any) => {
               if (pt.tickets) {
+                let ptTotal = 0;
                 pt.tickets.forEach((t: any) => {
                   invValue += t.quantity * t.cost_price;
                   totalQty += t.quantity;
-                  platformTotal += t.quantity;
+                  ptTotal += t.quantity;
                 });
+
+                if (ptTotal > 0 || pt.tickets.length > 0) {
+                  if (!productMap.has(pt.name)) {
+                    productMap.set(pt.name, {
+                      name: pt.name,
+                      totalQuantity: 0,
+                      originalIndex: productMap.size,
+                      platformDetails: []
+                    });
+                  }
+                  
+                  const gProd = productMap.get(pt.name)!;
+                  gProd.totalQuantity += ptTotal;
+                  gProd.platformDetails.push({
+                    platformName: platform.name,
+                    productTypeId: pt.id,
+                    tickets: pt.tickets
+                  });
+                }
               }
             });
           }
-          platformStats.push({ id: platform.id, name: platform.name, count: platformTotal, originalIndex: index });
         });
       }
 
-      // Sort platform stats by count descending
-      platformStats.sort((a, b) => b.count - a.count);
+      const globalProducts = Array.from(productMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
 
       // 2. Fetch sales for profit stats (this month)
       const { data: sales } = await supabase
@@ -136,7 +181,7 @@ export function Dashboard() {
         inventoryValue: invValue,
         totalTickets: totalQty,
         chartData: last7Days,
-        platformStats: platformStats
+        globalProducts: globalProducts
       });
 
     } catch (error) {
@@ -177,12 +222,6 @@ export function Dashboard() {
     },
   ];
 
-  const handlePlatformClick = (platformId: string) => {
-    // Save to localStorage so Tickets page will expand it automatically
-    localStorage.setItem('expandedPlatforms', JSON.stringify([platformId]));
-    navigate('/tickets');
-  };
-
   const getPlatformTheme = (index: number) => {
     const themes = [
       { card: 'bg-blue-100/90 border-blue-200/80', dot: 'bg-blue-500', text: 'text-blue-900', countBg: 'bg-blue-200/50' },
@@ -194,6 +233,87 @@ export function Dashboard() {
     return themes[index % themes.length];
   };
 
+  async function handleSellTicket(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const totalSellPrice = parseFloat(batchSellData.total_price);
+    if (isNaN(totalSellPrice) || totalSellPrice < 0) {
+      toast.error('请输入有效的总售价');
+      return;
+    }
+
+    const ticketsToSell = Object.entries(batchSellData.quantities).filter(([_, qty]) => qty > 0);
+    if (ticketsToSell.length === 0) {
+      toast.error('请至少选择一张优惠券进行售出');
+      return;
+    }
+
+    let totalQty = 0;
+    const saleRecords: any[] = [];
+    const ticketUpdates: { id: string; currentQty: number; sellQty: number; cost_price: number }[] = [];
+
+    // Validate quantities and gather data
+    for (const [ticketId, sellQty] of ticketsToSell) {
+      let foundTicket: Ticket | null = null;
+      let platformName = '';
+      for (const pDetail of selectedProduct.platformDetails) {
+        const t = pDetail.tickets.find(t => t.id === ticketId);
+        if (t) {
+          foundTicket = t;
+          platformName = pDetail.platformName;
+          break;
+        }
+      }
+
+      if (!foundTicket) continue;
+      
+      if (sellQty > foundTicket.quantity) {
+        toast.error(`售出数量不能大于库存数量 (平台 ${platformName}, 成本 ¥${foundTicket.cost_price})`);
+        return;
+      }
+      
+      totalQty += sellQty;
+      ticketUpdates.push({ id: foundTicket.id, currentQty: foundTicket.quantity, sellQty, cost_price: foundTicket.cost_price });
+    }
+
+    const avgSellPrice = totalSellPrice / totalQty;
+
+    try {
+      for (const update of ticketUpdates) {
+        const profit = (avgSellPrice - update.cost_price) * update.sellQty;
+
+        saleRecords.push({
+          ticket_id: update.id,
+          sell_price: avgSellPrice,
+          quantity: update.sellQty,
+          profit: profit,
+          sold_at: batchSellData.sold_at,
+        });
+      }
+
+      // 1. Insert all sales records
+      const { error: saleError } = await supabase.from('sales').insert(saleRecords);
+      if (saleError) throw saleError;
+
+      // 2. Update all ticket quantities
+      for (const update of ticketUpdates) {
+        const { error: ticketError } = await supabase
+          .from('tickets')
+          .update({ quantity: update.currentQty - update.sellQty })
+          .eq('id', update.id);
+        if (ticketError) throw ticketError;
+      }
+
+      toast.success('组合售出成功');
+      setIsSellOpen(false);
+      setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
+      fetchDashboardData();
+    } catch (error: any) {
+      toast.error('售出失败: ' + error.message);
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-10 text-gray-500">加载中...</div>;
   }
@@ -202,19 +322,22 @@ export function Dashboard() {
     <div className="space-y-8">
       <h2 className="text-3xl font-bold tracking-tight text-gray-900">数据看板</h2>
 
-      {/* 平台库存分布（顶置） */}
+      {/* 商品全局聚合分布（顶置） */}
       <div>
-        <h3 className="text-lg font-bold text-gray-800 mb-3">平台分布</h3>
-        {data.platformStats.length === 0 ? (
-          <div className="text-sm text-gray-400">暂无平台数据</div>
+        <h3 className="text-lg font-bold text-gray-800 mb-3">商品全局聚合</h3>
+        {data.globalProducts.length === 0 ? (
+          <div className="text-sm text-gray-400">暂无商品数据</div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-            {data.platformStats.map((stat, i) => {
+            {data.globalProducts.map((stat, i) => {
               const theme = getPlatformTheme(stat.originalIndex);
               return (
               <div 
                 key={i} 
-                onClick={() => handlePlatformClick(stat.id)}
+                onClick={() => {
+                  setSelectedProduct(stat);
+                  setIsDetailOpen(true);
+                }}
                 className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${theme.card}`}
               >
                 <div className="flex items-center gap-2.5">
@@ -222,7 +345,7 @@ export function Dashboard() {
                   <span className={`text-sm sm:text-base font-semibold truncate ${theme.text}`}>{stat.name}</span>
                 </div>
                 <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${theme.text}`}>
-                  {stat.count} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
+                  {stat.totalQuantity} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
                 </div>
               </div>
             )})}
@@ -270,6 +393,113 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 商品详情弹窗 */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 text-xl font-bold">{selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>全局总库存</span>
+              <span className="font-bold text-gray-900 text-lg">{selectedProduct?.totalQuantity} 张</span>
+            </div>
+            
+            <div className="space-y-3 mt-4">
+              <label className="text-sm font-semibold text-gray-700">各平台分布</label>
+              {selectedProduct?.platformDetails.map((p, idx) => {
+                const pTotal = p.tickets.reduce((sum, t) => sum + t.quantity, 0);
+                if (pTotal === 0 && p.tickets.length === 0) return null;
+                return (
+                  <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-primary/80 text-sm">{p.platformName}</span>
+                      <span className="text-xs font-medium text-gray-500">共 {pTotal} 张</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {p.tickets.filter(t => t.quantity > 0).map(t => (
+                        <div key={t.id} className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500">成本: ¥{t.cost_price.toFixed(2)}</span>
+                          <span className="text-gray-700 font-medium">{t.quantity} 张</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button 
+              className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20 mt-6"
+              onClick={() => {
+                setIsDetailOpen(false);
+                setIsSellOpen(true);
+                setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
+              }}
+            >
+              跨平台组合售出
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 组合售出弹窗 */}
+      <Dialog open={isSellOpen} onOpenChange={setIsSellOpen}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">组合售出 - {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSellTicket} className="space-y-5 mt-2">
+            
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">选择要售出的票据</label>
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                {selectedProduct?.platformDetails.map(p => 
+                  p.tickets.filter(t => t.quantity > 0).map(ticket => (
+                  <div key={ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-primary/80 mb-1">{p.platformName}</span>
+                      <span className="text-xs text-gray-400">成本价</span>
+                      <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
+                      <span className="text-xs text-gray-500 mt-0.5">库存: {ticket.quantity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-gray-500">售出</label>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        max={ticket.quantity} 
+                        value={batchSellData.quantities[ticket.id] || ''} 
+                        onChange={e => {
+                          const val = parseInt(e.target.value) || 0;
+                          setBatchSellData(prev => ({
+                            ...prev,
+                            quantities: { ...prev.quantities, [ticket.id]: val }
+                          }));
+                        }} 
+                        className="w-20 rounded-lg h-9 bg-white text-center" 
+                      />
+                    </div>
+                  </div>
+                )))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">总售价 (元)</label>
+                <Input required type="number" step="0.01" min="0" value={batchSellData.total_price} onChange={e => setBatchSellData({...batchSellData, total_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary font-bold text-lg" placeholder="输入这批总价" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">售出日期</label>
+                <Input required type="date" value={batchSellData.sold_at} onChange={e => setBatchSellData({...batchSellData, sold_at: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+              </div>
+            </div>
+            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">确认售出</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

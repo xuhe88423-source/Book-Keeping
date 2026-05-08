@@ -36,7 +36,11 @@ export function Tickets() {
   const [newTicket, setNewTicket] = useState({ cost_price: '', quantity: '' });
 
   const [isSellOpen, setIsSellOpen] = useState(false);
-  const [selectedProductForSell, setSelectedProductForSell] = useState<{ id: string, name: string, tickets: Ticket[] } | null>(null);
+  const [selectedProductForSell, setSelectedProductForSell] = useState<{ 
+    id: string; 
+    name: string; 
+    crossPlatformTickets: { ticket: Ticket; platformName: string; productTypeId: string }[] 
+  } | null>(null);
   const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
     total_price: '',
     quantities: {},
@@ -197,31 +201,31 @@ export function Tickets() {
 
     let totalQty = 0;
     const saleRecords: any[] = [];
-    const ticketUpdates: { id: string; currentQty: number; sellQty: number }[] = [];
+    const ticketUpdates: { id: string; currentQty: number; sellQty: number; cost_price: number }[] = [];
 
     // Validate quantities and gather data
     for (const [ticketId, sellQty] of ticketsToSell) {
-      const ticket = selectedProductForSell.tickets.find(t => t.id === ticketId);
-      if (!ticket) continue;
+      const crossItem = selectedProductForSell.crossPlatformTickets.find(item => item.ticket.id === ticketId);
+      if (!crossItem) continue;
+      const ticket = crossItem.ticket;
       
       if (sellQty > ticket.quantity) {
-        toast.error(`售出数量不能大于库存数量 (成本 ¥${ticket.cost_price})`);
+        toast.error(`售出数量不能大于库存数量 (平台 ${crossItem.platformName}, 成本 ¥${ticket.cost_price})`);
         return;
       }
       
       totalQty += sellQty;
-      ticketUpdates.push({ id: ticket.id, currentQty: ticket.quantity, sellQty });
+      ticketUpdates.push({ id: ticket.id, currentQty: ticket.quantity, sellQty, cost_price: ticket.cost_price });
     }
 
     const avgSellPrice = totalSellPrice / totalQty;
 
     try {
       for (const update of ticketUpdates) {
-        const ticket = selectedProductForSell.tickets.find(t => t.id === update.id)!;
-        const profit = (avgSellPrice - ticket.cost_price) * update.sellQty;
+        const profit = (avgSellPrice - update.cost_price) * update.sellQty;
 
         saleRecords.push({
-          ticket_id: ticket.id,
+          ticket_id: update.id,
           sell_price: avgSellPrice,
           quantity: update.sellQty,
           profit: profit,
@@ -505,7 +509,22 @@ export function Tickets() {
                                 <Dialog open={isSellOpen && selectedProductForSell?.id === pt.id} onOpenChange={(open) => {
                                   setIsSellOpen(open);
                                   if (open) {
-                                    setSelectedProductForSell({ id: pt.id, name: pt.name, tickets: pt.tickets || [] });
+                                    const crossPlatformTickets: { ticket: Ticket; platformName: string; productTypeId: string }[] = [];
+                                    platforms.forEach(p => {
+                                      p.product_types?.forEach(otherPt => {
+                                        if (otherPt.name === pt.name) {
+                                          otherPt.tickets?.forEach(t => {
+                                            crossPlatformTickets.push({
+                                              ticket: t,
+                                              platformName: p.name,
+                                              productTypeId: otherPt.id
+                                            });
+                                          });
+                                        }
+                                      });
+                                    });
+
+                                    setSelectedProductForSell({ id: pt.id, name: pt.name, crossPlatformTickets });
                                     setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
                                   } else {
                                     setSelectedProductForSell(null);
@@ -527,25 +546,26 @@ export function Tickets() {
                                       <div className="space-y-3">
                                         <label className="text-sm font-medium text-gray-700">选择要售出的票据</label>
                                         <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                                          {(pt.tickets || []).filter(t => t.quantity > 0).map(ticket => (
-                                            <div key={ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                                          {(selectedProductForSell?.crossPlatformTickets || []).filter(item => item.ticket.quantity > 0).map(item => (
+                                            <div key={item.ticket.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
                                               <div className="flex flex-col">
+                                                <span className="text-xs font-semibold text-primary/80 mb-1">{item.platformName}</span>
                                                 <span className="text-xs text-gray-400">成本价</span>
-                                                <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
-                                                <span className="text-xs text-gray-500 mt-0.5">库存: {ticket.quantity}</span>
+                                                <span className="font-bold text-gray-900">¥{item.ticket.cost_price.toFixed(2)}</span>
+                                                <span className="text-xs text-gray-500 mt-0.5">库存: {item.ticket.quantity}</span>
                                               </div>
                                               <div className="flex items-center gap-2">
                                                 <label className="text-xs font-medium text-gray-500">售出</label>
                                                 <Input 
                                                   type="number" 
                                                   min="0" 
-                                                  max={ticket.quantity} 
-                                                  value={batchSellData.quantities[ticket.id] || ''} 
+                                                  max={item.ticket.quantity} 
+                                                  value={batchSellData.quantities[item.ticket.id] || ''} 
                                                   onChange={e => {
                                                     const val = parseInt(e.target.value) || 0;
                                                     setBatchSellData(prev => ({
                                                       ...prev,
-                                                      quantities: { ...prev.quantities, [ticket.id]: val }
+                                                      quantities: { ...prev.quantities, [item.ticket.id]: val }
                                                     }));
                                                   }} 
                                                   className="w-20 rounded-lg h-9 bg-white text-center" 
@@ -553,7 +573,7 @@ export function Tickets() {
                                               </div>
                                             </div>
                                           ))}
-                                          {(pt.tickets || []).filter(t => t.quantity > 0).length === 0 && (
+                                          {(selectedProductForSell?.crossPlatformTickets || []).filter(item => item.ticket.quantity > 0).length === 0 && (
                                             <div className="text-center py-4 text-sm text-gray-400">没有可售出的库存</div>
                                           )}
                                         </div>
