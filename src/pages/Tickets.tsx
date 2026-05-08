@@ -464,92 +464,85 @@ export function Tickets() {
                               {(!pt.tickets || pt.tickets.length === 0) ? (
                                 <div className="text-center py-3 text-xs text-gray-400">暂无具体优惠券记录</div>
                               ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-2">
                                   {pt.tickets.map(ticket => (
-                                    <div key={ticket.id} className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-100 flex flex-col gap-3">
-                                      
-                                      {/* Top: Price & Delete */}
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="text-xs text-gray-400 font-medium mb-1">成本单价</div>
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-2xl font-bold text-gray-900 tracking-tight">¥{ticket.cost_price.toFixed(2)}</span>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
-                                              <Pencil className="w-3 h-3" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </div>
-
-                                      {/* Bottom: Quantity & Sell */}
-                                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                                    <div key={ticket.id} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
                                         
-                                        {/* Quantity Control */}
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-xs text-gray-500 font-medium">库存</span>
-                                          <div className="flex items-center bg-gray-100/80 rounded-full p-1">
-                                            <Button 
-                                              variant="ghost" 
-                                              size="icon" 
-                                              className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-destructive"
-                                              onClick={() => handleQuickDecrease(ticket)}
-                                              disabled={ticket.quantity <= 0}
-                                            >
-                                              <Minus className="w-3.5 h-3.5" />
-                                            </Button>
-                                            <span className="w-8 text-center font-bold text-gray-900 text-sm">{ticket.quantity}</span>
-                                            <Button 
-                                              variant="ghost" 
-                                              size="icon" 
-                                              className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-primary"
-                                              onClick={() => handleQuickAdd(ticket)}
-                                            >
-                                              <Plus className="w-3.5 h-3.5" />
+                                        {/* Left: Price */}
+                                        <div className="flex flex-col shrink-0 min-w-[70px]">
+                                          <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
+                                          <div className="flex items-center gap-0.5">
+                                            <span className="text-gray-900 font-bold text-sm tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
+                                              <Pencil className="w-2.5 h-2.5" />
                                             </Button>
                                           </div>
                                         </div>
-
-                                        {/* Sell Button */}
-                                        <Dialog open={isSellOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
-                                          setIsSellOpen(open);
-                                          if (open) setSelectedTicket(ticket);
-                                          else setSelectedTicket(null);
-                                        }}>
-                                          <DialogTrigger
-                                            render={
-                                              <Button variant="default" size="sm" className="h-9 px-5 rounded-xl font-bold shadow-md shadow-primary/20" disabled={ticket.quantity <= 0}>
-                                                {ticket.quantity > 0 ? '售出' : '已售罄'}
-                                              </Button>
-                                            }
-                                          />
-                                          <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
-                                            <DialogHeader>
-                                              <DialogTitle className="text-gray-900">售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
-                                            </DialogHeader>
-                                            <form onSubmit={handleSellTicket} className="space-y-4">
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                  <label className="text-sm font-medium">卖出单价 (元)</label>
-                                                  <Input required type="number" step="0.01" value={sellData.sell_price} onChange={e => setSellData({...sellData, sell_price: e.target.value})} className="rounded-xl" />
+                                        
+                                        {/* Middle: Quantity Control */}
+                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full border border-gray-100/50 w-[100px] shrink-0">
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-destructive shrink-0"
+                                            onClick={() => handleQuickDecrease(ticket)}
+                                            disabled={ticket.quantity <= 0}
+                                          >
+                                            <Minus className="w-3.5 h-3.5" />
+                                          </Button>
+                                          <span className="font-bold text-gray-900 text-center text-sm flex-1">{ticket.quantity}</span>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-7 w-7 rounded-full bg-white shadow-sm text-gray-700 hover:text-primary shrink-0"
+                                            onClick={() => handleQuickAdd(ticket)}
+                                          >
+                                            <Plus className="w-3.5 h-3.5" />
+                                          </Button>
+                                        </div>
+                                          
+                                        {/* Right: Sell & Delete */}
+                                        <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                                          <Dialog open={isSellOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
+                                            setIsSellOpen(open);
+                                            if (open) setSelectedTicket(ticket);
+                                            else setSelectedTicket(null);
+                                          }}>
+                                            <DialogTrigger
+                                              render={
+                                                <Button variant="default" size="sm" className="h-8 px-4 rounded-full font-bold text-xs shadow-md shadow-primary/20 shrink-0" disabled={ticket.quantity <= 0}>
+                                                  {ticket.quantity > 0 ? '售出' : '已售罄'}
+                                                </Button>
+                                              }
+                                            />
+                                            <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+                                              <DialogHeader>
+                                                <DialogTitle className="text-gray-900">售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
+                                              </DialogHeader>
+                                              <form onSubmit={handleSellTicket} className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                  <div className="space-y-2">
+                                                    <label className="text-sm font-medium">卖出单价 (元)</label>
+                                                    <Input required type="number" step="0.01" value={sellData.sell_price} onChange={e => setSellData({...sellData, sell_price: e.target.value})} className="rounded-xl" />
+                                                  </div>
+                                                  <div className="space-y-2">
+                                                    <label className="text-sm font-medium">售出数量 (最多 {ticket.quantity})</label>
+                                                    <Input required type="number" min="1" max={ticket.quantity} value={sellData.quantity} onChange={e => setSellData({...sellData, quantity: e.target.value})} className="rounded-xl" />
+                                                  </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                  <label className="text-sm font-medium">售出数量 (最多 {ticket.quantity})</label>
-                                                  <Input required type="number" min="1" max={ticket.quantity} value={sellData.quantity} onChange={e => setSellData({...sellData, quantity: e.target.value})} className="rounded-xl" />
+                                                  <label className="text-sm font-medium">售出日期</label>
+                                                  <Input required type="date" value={sellData.sold_at} onChange={e => setSellData({...sellData, sold_at: e.target.value})} className="rounded-xl" />
                                                 </div>
-                                              </div>
-                                              <div className="space-y-2">
-                                                <label className="text-sm font-medium">售出日期</label>
-                                                <Input required type="date" value={sellData.sold_at} onChange={e => setSellData({...sellData, sold_at: e.target.value})} className="rounded-xl" />
-                                              </div>
-                                              <Button type="submit" className="w-full rounded-full">确认售出</Button>
-                                            </form>
-                                          </DialogContent>
-                                        </Dialog>
-
-                                      </div>
+                                                <Button type="submit" className="w-full rounded-full">确认售出</Button>
+                                              </form>
+                                            </DialogContent>
+                                          </Dialog>
+                                          
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-300 hover:text-destructive hover:bg-destructive/10 shrink-0" onClick={() => setDeleteConfirm({type: 'ticket', id: ticket.id})}>
+                                              <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </div>
                                     </div>
                                   ))}
                                 </div>
