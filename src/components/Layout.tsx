@@ -55,22 +55,26 @@ export function Layout() {
       </main>
 
       {/* Bottom Nav for Mobile - MOZE Style */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-3xl border-t border-gray-100 flex justify-around p-2 pb-safe z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.08)]">
+      <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-white/95 backdrop-blur-3xl border border-gray-100 flex justify-around p-2.5 z-50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem]">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-14 rounded-2xl transition-all duration-300 ease-out mx-2',
-                isActive ? 'bg-primary/10 text-primary scale-100' : 'text-gray-400 hover:text-gray-800'
+                'flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ease-out',
+                isActive ? 'bg-primary text-white shadow-[0_4px_12px_rgba(37,99,235,0.4)] scale-[1.05]' : 'text-gray-400 hover:text-gray-800 hover:bg-gray-50'
               )
             }
           >
             {({ isActive }) => (
               <>
-                <item.icon className={cn("w-6 h-6", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
-                <span className={cn("text-[10px] mt-1", isActive ? "font-bold tracking-wide" : "font-medium")}>{item.label}</span>
+                <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
+                {isActive ? (
+                   <span className="text-[11px] font-bold mt-1 tracking-wide">{item.label}</span>
+                ) : (
+                   <span className="text-[11px] font-medium mt-1">{item.label}</span>
+                )}
               </>
             )}
           </NavLink>
