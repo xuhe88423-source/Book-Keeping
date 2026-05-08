@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Platform, Ticket } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Tag, Store, Minus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Tag, Store, Minus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -309,16 +309,16 @@ export function Tickets() {
               </Button>
             }
           />
-          <DialogContent className="rounded-3xl border-none shadow-2xl">
+          <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
             <DialogHeader>
-              <DialogTitle className="text-xl">新增平台</DialogTitle>
+              <DialogTitle className="text-gray-900">新增平台</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddPlatform} className="space-y-5 mt-2">
-              <div className="space-y-3">
+            <form onSubmit={handleAddPlatform} className="space-y-4">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">平台名称</label>
-                <Input required placeholder="如：淘宝、美团" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                <Input required placeholder="如：淘宝、美团" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
               </div>
-              <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
+              <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -329,7 +329,7 @@ export function Tickets() {
       ) : platforms.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] font-medium border border-white/50">暂无数据，请先新增平台。</div>
       ) : (
-        <Accordion type="multiple" className="space-y-6" defaultValue={platforms.map(p => p.id)}>
+        <Accordion className="space-y-6" defaultValue={platforms.map(p => p.id)}>
           {platforms.map((platform, idx) => (
             <AccordionItem value={platform.id} key={platform.id} className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
               <AccordionTrigger className="hover:no-underline py-5 px-6">
@@ -365,16 +365,16 @@ export function Tickets() {
                         </Button>
                       }
                     />
-                    <DialogContent className="rounded-3xl border-none shadow-2xl">
+                    <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
                       <DialogHeader>
-                        <DialogTitle className="text-xl">新增商品类型 - {platform.name}</DialogTitle>
+                        <DialogTitle className="text-gray-900">新增商品类型 - {platform.name}</DialogTitle>
                       </DialogHeader>
-                      <form onSubmit={handleAddProductType} className="space-y-5 mt-2">
-                        <div className="space-y-3">
+                      <form onSubmit={handleAddProductType} className="space-y-4">
+                        <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">商品名称</label>
-                          <Input required placeholder="如：100元代金券" value={newProductTypeName} onChange={e => setNewProductTypeName(e.target.value)} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                          <Input required placeholder="如：100元代金券" value={newProductTypeName} onChange={e => setNewProductTypeName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                         </div>
-                        <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
+                        <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -383,7 +383,7 @@ export function Tickets() {
                 {(!platform.product_types || platform.product_types.length === 0) ? (
                    <div className="text-center py-6 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">该平台下暂无商品类型</div>
                 ) : (
-                  <Accordion type="multiple" className="space-y-3" defaultValue={platform.product_types.map(pt => pt.id)}>
+                  <Accordion className="space-y-3" defaultValue={platform.product_types.map(pt => pt.id)}>
                     {platform.product_types.map(pt => {
                       const totalQty = getTotalQuantity(pt.tickets);
                       return (
@@ -425,22 +425,22 @@ export function Tickets() {
                                       </Button>
                                     }
                                   />
-                                  <DialogContent className="rounded-3xl border-none shadow-2xl">
+                                  <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
                                     <DialogHeader>
-                                      <DialogTitle className="text-xl">添加优惠券 - {pt.name}</DialogTitle>
+                                      <DialogTitle className="text-gray-900">添加优惠券 - {pt.name}</DialogTitle>
                                     </DialogHeader>
                                     <form onSubmit={handleAddTicket} className="space-y-5 mt-2">
                                       <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-3">
+                                        <div className="space-y-2">
                                           <label className="text-sm font-medium text-gray-700">成本价 (元)</label>
-                                          <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                                          <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                         </div>
-                                        <div className="space-y-3">
+                                        <div className="space-y-2">
                                           <label className="text-sm font-medium text-gray-700">初始数量</label>
-                                          <Input required type="number" min="1" value={newTicket.quantity} onChange={e => setNewTicket({...newTicket, quantity: e.target.value})} className="rounded-2xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+                                          <Input required type="number" min="1" value={newTicket.quantity} onChange={e => setNewTicket({...newTicket, quantity: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                         </div>
                                       </div>
-                                      <Button type="submit" className="w-full rounded-2xl h-12 font-bold text-base shadow-lg shadow-primary/20">保存</Button>
+                                      <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
                                     </form>
                                   </DialogContent>
                                 </Dialog>
@@ -503,9 +503,9 @@ export function Tickets() {
                                               </Button>
                                             }
                                           />
-                                          <DialogContent className="rounded-2xl sm:rounded-3xl">
+                                          <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
                                             <DialogHeader>
-                                              <DialogTitle>售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
+                                              <DialogTitle className="text-gray-900">售出票据 - {pt.name} (成本: ¥{ticket.cost_price})</DialogTitle>
                                             </DialogHeader>
                                             <form onSubmit={handleSellTicket} className="space-y-4">
                                               <div className="grid grid-cols-2 gap-4">
@@ -546,52 +546,55 @@ export function Tickets() {
 
       {/* Edit Platform Dialog */}
       <Dialog open={!!editPlatform} onOpenChange={(open) => !open && setEditPlatform(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl">
-          <DialogHeader><DialogTitle>修改平台名称</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+          <DialogHeader><DialogTitle className="text-gray-900">修改平台名称</DialogTitle></DialogHeader>
           <form onSubmit={handleEditPlatform} className="space-y-4">
-            <Input required value={editPlatform?.name || ''} onChange={e => setEditPlatform(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl" />
-            <Button type="submit" className="w-full rounded-full">保存</Button>
+            <Input required value={editPlatform?.name || ''} onChange={e => setEditPlatform(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
+            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Edit Product Type Dialog */}
       <Dialog open={!!editProductType} onOpenChange={(open) => !open && setEditProductType(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl">
-          <DialogHeader><DialogTitle>修改商品名称</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+          <DialogHeader><DialogTitle className="text-gray-900">修改商品名称</DialogTitle></DialogHeader>
           <form onSubmit={handleEditProductType} className="space-y-4">
-            <Input required value={editProductType?.name || ''} onChange={e => setEditProductType(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl" />
-            <Button type="submit" className="w-full rounded-full">保存</Button>
+            <Input required value={editProductType?.name || ''} onChange={e => setEditProductType(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
+            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Edit Ticket Cost Dialog */}
       <Dialog open={!!editTicketCost} onOpenChange={(open) => !open && setEditTicketCost(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl">
-          <DialogHeader><DialogTitle>修改成本价</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+          <DialogHeader><DialogTitle className="text-gray-900">修改成本价</DialogTitle></DialogHeader>
           <form onSubmit={handleEditTicket} className="space-y-4">
-            <Input required type="number" step="0.01" min="0" value={editTicketCost?.cost_price || ''} onChange={e => setEditTicketCost(prev => prev ? {...prev, cost_price: e.target.value} : null)} className="rounded-xl" />
-            <Button type="submit" className="w-full rounded-full">保存</Button>
+            <Input required type="number" step="0.01" min="0" value={editTicketCost?.cost_price || ''} onChange={e => setEditTicketCost(prev => prev ? {...prev, cost_price: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
+            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl border-destructive/20">
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-destructive/20">
           <DialogHeader>
-            <DialogTitle className="text-destructive">确认删除?</DialogTitle>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              确认删除?
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-gray-600">
-            {deleteConfirm?.type === 'platform' && `您即将删除平台 "${deleteConfirm.name}"。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！`}
-            {deleteConfirm?.type === 'product_type' && `您即将删除商品 "${deleteConfirm.name}"。此操作将同时永久删除该商品下的所有优惠券库存以及关联的售出明细记录！`}
-            {deleteConfirm?.type === 'ticket' && `您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！`}
-            <p className="mt-2 font-bold text-gray-900">此操作不可恢复，是否继续？</p>
+          <div className="py-4 text-gray-600 leading-relaxed">
+            {deleteConfirm?.type === 'platform' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除平台 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！</p>}
+            {deleteConfirm?.type === 'product_type' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除商品 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该商品下的所有优惠券库存以及关联的售出明细记录！</p>}
+            {deleteConfirm?.type === 'ticket' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！</p>}
+            <p className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</p>
           </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-full">取消</Button>
-            <Button variant="destructive" onClick={handleDelete} className="rounded-full">确认删除</Button>
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>
+            <Button variant="destructive" onClick={handleDelete} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20">确认删除</Button>
           </div>
         </DialogContent>
       </Dialog>
