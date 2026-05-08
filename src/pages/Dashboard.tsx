@@ -375,7 +375,7 @@ export function Dashboard() {
             <CardTitle className="text-lg font-bold text-gray-800">近 7 日利润趋势</CardTitle>
           </CardHeader>
           <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
-            <div className="h-[300px] w-full mt-4">
+            <div className="h-[200px] w-full mt-4" style={{ touchAction: 'pan-y' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} dy={10} fontWeight={500} />
