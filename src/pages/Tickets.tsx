@@ -241,6 +241,18 @@ export function Tickets() {
     return themes[index % themes.length];
   };
 
+  const handleAccordionScroll = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget;
+    // Check if it's about to open
+    if (target.getAttribute('data-state') === 'closed') {
+      setTimeout(() => {
+        // Scroll the target to the top with a slight offset so it's not hidden behind any top elements
+        const y = target.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }, 300); // Wait for the accordion animation to expand
+    }
+  };
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex justify-between items-center">
@@ -281,7 +293,7 @@ export function Tickets() {
             const platformTotal = getPlatformTotalQuantity(platform.id);
             return (
             <AccordionItem value={platform.id} key={platform.id} className={`backdrop-blur-xl border rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ${theme.card}`}>
-              <AccordionTrigger className="hover:no-underline py-5 px-6">
+              <AccordionTrigger className="hover:no-underline py-5 px-6" onClick={handleAccordionScroll}>
                 <div className="flex justify-between items-center w-full pr-2">
                   <div className="flex items-center gap-4 text-xl font-bold text-gray-900 tracking-tight">
                     <div className={`w-12 h-12 ${theme.icon} rounded-[1.25rem] flex items-center justify-center shadow-inner`}>
@@ -315,7 +327,7 @@ export function Tickets() {
                       const totalQty = ptTickets.reduce((sum, t) => sum + t.quantity, 0);
                       return (
                         <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-2xl px-3 sm:px-4 overflow-hidden shadow-sm">
-                          <AccordionTrigger className="hover:no-underline py-3">
+                          <AccordionTrigger className="hover:no-underline py-3" onClick={handleAccordionScroll}>
                             <div className="flex justify-between items-center w-full pr-1">
                               <div className="flex items-center gap-2 font-semibold text-gray-800 text-base">
                                 <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
