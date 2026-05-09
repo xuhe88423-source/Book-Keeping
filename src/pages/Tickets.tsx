@@ -242,7 +242,7 @@ export function Tickets() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-8 pb-10" style={{ overflowAnchor: 'none' }}>
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">票据库存</h2>
         

@@ -10,9 +10,9 @@ export function Layout() {
   ];
 
   return (
-    <div className="fixed inset-0 overflow-hidden flex bg-background md:flex-row flex-col font-sans text-foreground">
+    <div className="min-h-screen flex bg-background md:flex-row flex-col font-sans text-foreground">
       {/* Sidebar for PC */}
-      <aside className="hidden md:flex flex-col w-72 bg-white/70 backdrop-blur-2xl border-r border-white/20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+      <aside className="hidden md:flex flex-col w-72 fixed inset-y-0 left-0 bg-white/70 backdrop-blur-2xl border-r border-white/20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
         <div className="p-8 pt-10">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
@@ -43,22 +43,22 @@ export function Layout() {
       </aside>
 
       {/* Top Header for Mobile */}
-      <header className="md:hidden flex-none bg-white/70 backdrop-blur-2xl border-b border-white/20 p-4 z-20 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+      <header className="md:hidden sticky top-0 flex-none bg-white/70 backdrop-blur-2xl border-b border-white/20 p-4 z-20 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
         <h1 className="text-xl font-bold tracking-tight text-gray-900 text-center">记账助手</h1>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+      <main className="flex-1 relative md:ml-72">
         <div className="max-w-4xl mx-auto p-4 md:p-10 pb-36 md:pb-10">
           <Outlet />
         </div>
       </main>
 
       {/* Fade out effect at the bottom for mobile */}
-      <div className="md:hidden absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none z-40"></div>
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none z-40"></div>
 
       {/* Bottom Nav for Mobile - Docked to bottom */}
-      <nav className="md:hidden absolute bottom-0 left-0 right-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200/50 flex justify-around pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] px-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-200/50 flex justify-around pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] px-2 z-50">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
