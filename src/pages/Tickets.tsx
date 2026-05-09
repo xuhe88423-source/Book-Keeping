@@ -64,12 +64,12 @@ export function Tickets() {
   }, [expandedProducts]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, []);
 
-  async function fetchData() {
+  async function fetchData(showLoading = true) {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [platformsRes, productsRes, ticketsRes] = await Promise.all([
         supabase.from('platforms').select('*').order('created_at', { ascending: true }),
         supabase.from('global_products').select('*').order('created_at', { ascending: true }),
@@ -94,7 +94,7 @@ export function Tickets() {
         toast.error('获取库存数据失败: ' + error.message);
       }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 
@@ -107,7 +107,7 @@ export function Tickets() {
       toast.success('平台创建成功');
       setIsAddPlatformOpen(false);
       setNewPlatformName('');
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('创建失败: ' + error.message);
     }
@@ -129,7 +129,7 @@ export function Tickets() {
       toast.success('优惠券添加成功');
       setIsAddTicketOpen(false);
       setNewTicket({ cost_price: '', quantity: '' });
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('添加失败: ' + error.message);
     }
@@ -144,7 +144,7 @@ export function Tickets() {
       if (error) throw error;
       toast.success('修改成功');
       setEditPlatform(null);
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
     }
@@ -158,7 +158,7 @@ export function Tickets() {
       if (error) throw error;
       toast.success('成本价修改成功');
       setEditTicketCost(null);
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
     }
@@ -176,7 +176,7 @@ export function Tickets() {
       if (error) throw error;
       toast.success('删除成功');
       setDeleteConfirm(null);
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('删除失败: ' + error.message);
     }
@@ -192,7 +192,7 @@ export function Tickets() {
 
       if (error) throw error;
       toast.success('已快速增加 1 张');
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('增加数量失败: ' + error.message);
     }
@@ -216,7 +216,7 @@ export function Tickets() {
       } else {
         toast.success('已快速减少 1 张');
       }
-      fetchData();
+      fetchData(false);
     } catch (error: any) {
       toast.error('减少数量失败: ' + error.message);
     }
@@ -239,18 +239,6 @@ export function Tickets() {
       { icon: 'bg-gradient-to-br from-purple-500 to-fuchsia-600', card: 'bg-purple-100/90 border-purple-200/80', dot: 'bg-purple-500', text: 'text-purple-900', countBg: 'bg-purple-200/50' },
     ];
     return themes[index % themes.length];
-  };
-
-  const handleAccordionScroll = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const target = e.currentTarget;
-    // Check if it's about to open
-    if (target.getAttribute('data-state') === 'closed') {
-      setTimeout(() => {
-        // Scroll the target to the top with a slight offset so it's not hidden behind any top elements
-        const y = target.getBoundingClientRect().top + window.scrollY - 80;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }, 300); // Wait for the accordion animation to expand
-    }
   };
 
   return (
@@ -293,7 +281,7 @@ export function Tickets() {
             const platformTotal = getPlatformTotalQuantity(platform.id);
             return (
             <AccordionItem value={platform.id} key={platform.id} className={`backdrop-blur-xl border rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ${theme.card}`}>
-              <AccordionTrigger className="hover:no-underline py-5 px-6" onClick={handleAccordionScroll}>
+              <AccordionTrigger className="hover:no-underline py-5 px-6">
                 <div className="flex justify-between items-center w-full pr-2">
                   <div className="flex items-center gap-4 text-xl font-bold text-gray-900 tracking-tight">
                     <div className={`w-12 h-12 ${theme.icon} rounded-[1.25rem] flex items-center justify-center shadow-inner`}>
@@ -327,7 +315,7 @@ export function Tickets() {
                       const totalQty = ptTickets.reduce((sum, t) => sum + t.quantity, 0);
                       return (
                         <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-2xl px-3 sm:px-4 overflow-hidden shadow-sm">
-                          <AccordionTrigger className="hover:no-underline py-3" onClick={handleAccordionScroll}>
+                          <AccordionTrigger className="hover:no-underline py-3">
                             <div className="flex justify-between items-center w-full pr-1">
                               <div className="flex items-center gap-2 font-semibold text-gray-800 text-base">
                                 <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
