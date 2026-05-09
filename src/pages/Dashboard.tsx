@@ -27,9 +27,11 @@ export interface GlobalProduct {
 interface DashboardData {
   todayProfit: number;
   todaySoldQuantity: number;
+  actualTodayProfit: number;
+  actualTodayQty: number;
   monthProfit: number;
   monthSoldQuantity: number;
-  chartData: { date: string; profit: number }[];
+  chartData: { date: string; fullDate: string; profit: number }[];
   globalProducts: GlobalProduct[];
 }
 
@@ -38,6 +40,8 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData>({
     todayProfit: 0,
     todaySoldQuantity: 0,
+    actualTodayProfit: 0,
+    actualTodayQty: 0,
     monthProfit: 0,
     monthSoldQuantity: 0,
     chartData: [],
@@ -143,39 +147,29 @@ export function Dashboard() {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      // 1. Get today's sales to find tickets to revert
-      const { data: todaySales, error: fetchError } = await supabase
-        .from('sales')
-        .select('ticket_id')
-        .eq('sold_at', today);
-
-      if (fetchError) throw fetchError;
-
-      if (todaySales && todaySales.length > 0) {
-        const ticketIds = todaySales.map(s => s.ticket_id);
-        
-        // 2. Revert tickets back to 'for_sale'
-        const { error: updateError } = await supabase
-          .from('tickets')
-          .update({ status: 'for_sale' })
-          .in('id', ticketIds);
-          
-        if (updateError) throw updateError;
-      }
-
-      // 3. Delete today's sales records
-      const { error: deleteError } = await supabase
-        .from('sales')
-        .delete()
-        .eq('sold_at', today);
-
-      if (deleteError) throw deleteError;
-
-      toast.success('今日销售数据已清空，商品已恢复待售');
+      // Store the current actual profit and qty in localStorage as "settled"
+      localStorage.setItem(`settled_profit_${today}`, data.actualTodayProfit.toString());
+      localStorage.setItem(`settled_qty_${today}`, data.actualTodayQty.toString());
+      
+      toast.success('今日看板数据已归零');
       setClearTodayConfirm(false);
-      fetchDashboardData();
+      
+      // Update local state directly instead of full refetch to avoid flicker
+      setData(prev => {
+        const newChartData = [...prev.chartData];
+        const chartItemToday = newChartData.find(item => item.fullDate === today);
+        if (chartItemToday) {
+          chartItemToday.profit = 0;
+        }
+        return {
+          ...prev,
+          todayProfit: 0,
+          todaySoldQuantity: 0,
+          chartData: newChartData
+        };
+      });
     } catch (error: any) {
-      toast.error('清空失败: ' + error.message);
+      toast.error('归零失败: ' + error.message);
     }
   }
 
@@ -305,9 +299,24 @@ export function Dashboard() {
         }
       }
 
+      // Apply frontend daily settlement to today's display data
+      const settledProfit = Number(localStorage.getItem(`settled_profit_${today}`) || 0);
+      const settledQty = Number(localStorage.getItem(`settled_qty_${today}`) || 0);
+
+      const displayTProfit = Math.max(0, tProfit - settledProfit);
+      const displayTQty = Math.max(0, tQty - settledQty);
+
+      // We subtract settled profit from today's chart bar to make it match the display.
+      const chartItemToday = last7Days.find(item => item.fullDate === today);
+      if (chartItemToday) {
+        chartItemToday.profit = Math.max(0, chartItemToday.profit - settledProfit);
+      }
+
       setData({
-        todayProfit: tProfit,
-        todaySoldQuantity: tQty,
+        todayProfit: displayTProfit,
+        todaySoldQuantity: displayTQty,
+        actualTodayProfit: tProfit,
+        actualTodayQty: tQty,
         monthProfit: mProfit,
         monthSoldQuantity: mQty,
         chartData: last7Days,
@@ -765,17 +774,19 @@ export function Dashboard() {
           <DialogHeader>
             <DialogTitle className="text-red-600 text-xl flex items-center gap-2">
               <AlertCircle className="w-6 h-6" />
-              确认清空今日数据？
+              确认将今日数据归零？
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-gray-600 leading-relaxed">
             <div className="text-sm mt-3 bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100/50 font-medium">
-              此操作将<strong>撤销今天（{format(new Date(), 'yyyy-MM-dd')}）产生的所有售出记录</strong>，相关的商品状态也会自动恢复为“待售”。
+              此操作仅会将看板上的<strong>【今日利润】</strong>与<strong>【售出数量】</strong>归零。
+              <br /><br />
+              您的实际销售明细记录和商品状态<strong>都不会</strong>受到任何影响。
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setClearTodayConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200">取消</Button>
-            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearTodaySales}>确认撤销</Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearTodaySales}>确认归零</Button>
           </div>
         </DialogContent>
       </Dialog>
