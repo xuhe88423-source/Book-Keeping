@@ -53,7 +53,6 @@ export function Dashboard() {
   // Cross-platform sell states
   const [selectedProduct, setSelectedProduct] = useState<GlobalProduct | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isSellOpen, setIsSellOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<{id: string, name: string} | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<GlobalProduct | null>(null);
@@ -437,7 +436,6 @@ export function Dashboard() {
       if (ticketError) throw ticketError;
 
       toast.success('组合售出成功');
-      setIsSellOpen(false);
       setBatchSellData({ total_price: '', selectedTickets: {}, sold_at: new Date().toISOString().split('T')[0] });
       fetchDashboardData();
     } catch (error: any) {
@@ -604,21 +602,23 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* 商品详情弹窗 */}
+      {/* 商品详情与组合售出合并弹窗 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900 text-xl font-bold">{selectedProduct?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>全局总有效库存</span>
-              <span className="font-bold text-gray-900 text-lg">{selectedProduct?.totalQuantity} 张</span>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[90vh] h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="shrink-0 p-6 pb-4 border-b border-gray-100">
+            <DialogTitle className="text-gray-900 text-xl font-bold flex justify-between items-center pr-6">
+              <span>{selectedProduct?.name}</span>
+            </DialogTitle>
+            <div className="flex items-center text-sm text-gray-500 mt-2">
+              <span>全局总有效库存：</span>
+              <span className="font-bold text-gray-900 ml-1">{selectedProduct?.totalQuantity} 张</span>
             </div>
-            
-            <div className="space-y-3 mt-4">
-              <label className="text-sm font-semibold text-gray-700">各平台单据分布</label>
-              {selectedProduct?.platformDetails.map((p, idx) => {
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+            <div className="space-y-4">
+              <label className="text-sm font-semibold text-gray-700">各平台单据分布 (可直接勾选售卖)</label>
+              {selectedProduct?.platformDetails.map((p, pIndex) => {
                 const availableTickets = p.tickets
                   .filter(t => t.status !== 'used')
                   .sort((a, b) => {
@@ -626,95 +626,21 @@ export function Dashboard() {
                     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
                   });
                 if (availableTickets.length === 0) return null;
+                
+                const theme = getPlatformTheme(pIndex);
+                
                 return (
-                  <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-semibold text-primary/80 text-sm">{p.platformName}</span>
-                      <span className="text-xs font-medium text-gray-500">共 {availableTickets.length} 张</span>
-                    </div>
-                    <div className="space-y-2">
-                      {availableTickets.map(t => (
-                        <div key={t.id} className="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 font-medium">成本: ¥{t.cost_price.toFixed(2)}</span>
-                            {t.status === 'for_sale' ? (
-                              <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-bold">待售</span>
-                            ) : t.status === 'sold_pending' ? (
-                              <span className="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded text-[10px] font-bold">已售待使用</span>
-                            ) : null}
-                          </div>
-                          {t.status === 'sold_pending' && (
-                            <Button size="sm" variant="outline" className="h-7 rounded-full text-[10px] font-bold px-3 text-emerald-600 border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm gap-1" onClick={() => handleWriteOff(t.id)}>
-                              <CheckCircle2 className="w-3 h-3" />
-                              核销
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-3 mt-6">
-              {selectedProduct && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-12 w-12 rounded-xl text-gray-400 hover:text-destructive hover:bg-destructive/10 shrink-0 border border-gray-200" 
-                  onClick={() => setDeleteConfirm(selectedProduct)}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
-              )}
-              <Button 
-                className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
-                onClick={() => {
-                  setIsDetailOpen(false);
-                  setIsSellOpen(true);
-                  setBatchSellData({ total_price: '', selectedTickets: {}, sold_at: new Date().toISOString().split('T')[0] });
-                }}
-              >
-                跨平台组合售出
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 组合售出弹窗 */}
-      <Dialog open={isSellOpen} onOpenChange={setIsSellOpen}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900">组合售出 - {selectedProduct?.name}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSellTicket} className="space-y-5 mt-2">
-            
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">勾选要售出的单据</label>
-              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-                {selectedProduct?.platformDetails.map((p, pIndex) => {
-                  const availableTickets = p.tickets
-                    .filter(t => t.status !== 'used')
-                    .sort((a, b) => {
-                      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
-                      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-                    });
-                  if (availableTickets.length === 0) return null;
-                  
-                  // Use the same theme logic as the Dashboard cards
-                  const theme = getPlatformTheme(pIndex);
-                  
-                  return (
                   <div key={p.platformId} className={`rounded-xl border p-3 ${theme.card}`}>
-                    <div className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.text}`}>
-                      <div className={`w-2 h-2 rounded-full ${theme.dot}`}></div>
-                      {p.platformName}
+                    <div className={`flex justify-between items-center mb-3 ${theme.text}`}>
+                      <div className="flex items-center gap-2 text-sm font-bold">
+                        <div className={`w-2 h-2 rounded-full ${theme.dot}`}></div>
+                        {p.platformName}
+                      </div>
+                      <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
                     <div className="space-y-2">
                       {availableTickets.map(ticket => (
-                        <label key={ticket.id} className={`flex items-center justify-between bg-white/80 rounded-lg p-2 cursor-pointer border ${ticket.status !== 'for_sale' ? 'opacity-60 grayscale' : 'hover:border-primary/30'} transition-all`}>
+                        <label key={ticket.id} className={`flex items-center justify-between bg-white rounded-lg p-2 cursor-pointer border ${ticket.status !== 'for_sale' ? 'opacity-60 grayscale' : 'hover:border-primary/30 shadow-sm'} transition-all`}>
                           <div className="flex items-center gap-3">
                             <input 
                               type="checkbox" 
@@ -733,34 +659,72 @@ export function Dashboard() {
                               <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
                             </div>
                           </div>
-                          {ticket.status === 'for_sale' ? (
-                            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold border border-emerald-100">待售</span>
-                          ) : ticket.status === 'sold_pending' ? (
-                            <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded-full font-bold border border-orange-100">已售待使用</span>
-                          ) : null}
+                          
+                          <div className="flex items-center gap-2">
+                            {ticket.status === 'for_sale' ? (
+                              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold border border-emerald-100">待售</span>
+                            ) : ticket.status === 'sold_pending' ? (
+                              <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded-full font-bold border border-orange-100">已售待使用</span>
+                            ) : null}
+                            
+                            {ticket.status === 'sold_pending' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-7 rounded-full text-[10px] font-bold px-3 text-emerald-600 border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm gap-1 ml-1" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleWriteOff(ticket.id);
+                                }}
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                核销
+                              </Button>
+                            )}
+                          </div>
                         </label>
                       ))}
                     </div>
                   </div>
-                )})}
-              </div>
+                );
+              })}
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">总售价 (元)</label>
-                <Input required type="number" step="0.01" min="0" value={batchSellData.total_price} onChange={e => setBatchSellData({...batchSellData, total_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary font-bold text-lg" placeholder="输入总金额" />
+          <div className="shrink-0 p-4 sm:p-6 border-t border-gray-100 bg-white flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-500">总售价 (元)</label>
+                <Input type="number" step="0.01" min="0" value={batchSellData.total_price} onChange={e => setBatchSellData({...batchSellData, total_price: e.target.value})} className="rounded-xl h-11 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary font-bold text-base" placeholder="输入总金额" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">售出日期</label>
-                <Input required type="date" value={batchSellData.sold_at} onChange={e => setBatchSellData({...batchSellData, sold_at: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-500">售出日期</label>
+                <Input type="date" value={batchSellData.sold_at} onChange={e => setBatchSellData({...batchSellData, sold_at: e.target.value})} className="rounded-xl h-11 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
               </div>
             </div>
-            <div className="text-xs text-gray-400 text-center">注：售出将扣除 0.6% 的手续费计算最终利润</div>
-            <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
-              {isSubmitting ? '售出处理中...' : '确认售出'}
-            </Button>
-          </form>
+            
+            <div className="flex items-center justify-between gap-3 pt-2">
+              {selectedProduct && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-12 w-12 rounded-xl text-gray-400 hover:text-destructive hover:bg-destructive/10 shrink-0 border border-gray-200" 
+                  onClick={() => setDeleteConfirm(selectedProduct)}
+                  title="删除商品"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+              )}
+              <Button 
+                className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
+                onClick={handleSellTicket}
+                disabled={isSubmitting || Object.values(batchSellData.selectedTickets).filter(v => v).length === 0}
+              >
+                {isSubmitting ? '处理中...' : '售卖'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
