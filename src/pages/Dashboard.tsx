@@ -459,18 +459,8 @@ export function Dashboard() {
       {/* 商品详情弹窗 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between pr-8">
+          <DialogHeader>
             <DialogTitle className="text-gray-900 text-xl font-bold">{selectedProduct?.name}</DialogTitle>
-            {selectedProduct && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10 -mt-1" 
-                onClick={() => setDeleteConfirm(selectedProduct)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="flex items-center justify-between text-sm text-gray-500">
@@ -502,16 +492,28 @@ export function Dashboard() {
               })}
             </div>
 
-            <Button 
-              className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20 mt-6"
-              onClick={() => {
-                setIsDetailOpen(false);
-                setIsSellOpen(true);
-                setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
-              }}
-            >
-              跨平台组合售出
-            </Button>
+            <div className="flex items-center gap-3 mt-6">
+              {selectedProduct && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-12 w-12 rounded-xl text-gray-400 hover:text-destructive hover:bg-destructive/10 shrink-0 border border-gray-200" 
+                  onClick={() => setDeleteConfirm(selectedProduct)}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+              )}
+              <Button 
+                className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  setIsSellOpen(true);
+                  setBatchSellData({ total_price: '', quantities: {}, sold_at: new Date().toISOString().split('T')[0] });
+                }}
+              >
+                跨平台组合售出
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
