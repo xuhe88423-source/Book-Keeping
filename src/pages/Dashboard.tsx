@@ -661,7 +661,7 @@ export function Dashboard() {
                     </div>
                     <div className="space-y-2">
                       {availableTickets.map(ticket => (
-                        <label key={ticket.id} className={`flex items-center justify-between bg-white rounded-lg p-2 cursor-pointer border ${ticket.status !== 'for_sale' ? 'opacity-60 grayscale' : 'hover:border-primary/30 shadow-sm'} transition-all`}>
+                        <label key={ticket.id} className={`flex items-center justify-between rounded-lg p-2 cursor-pointer border ${ticket.status !== 'for_sale' ? 'bg-gray-50/80 border-gray-100' : 'bg-white hover:border-primary/30 shadow-sm'} transition-all`}>
                           <div className="flex items-center gap-3">
                             <input 
                               type="checkbox" 
