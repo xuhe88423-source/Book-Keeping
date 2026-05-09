@@ -264,11 +264,6 @@ export function Sales() {
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          {group.platforms.map((platform, idx) => (
-                            <span key={idx} className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                              {platform || '未知'}
-                            </span>
-                          ))}
                           <span className="text-xs text-gray-400 font-medium">{group.sold_at}</span>
                         </div>
                         <div className="font-extrabold text-xl text-gray-900 tracking-tight">{group.product_name}</div>
