@@ -687,14 +687,6 @@ export function Dashboard() {
                   });
                 if (availableTickets.length === 0) return null;
                 
-                // 计算该平台最低价
-                let lowestPrice = Infinity;
-                availableTickets.forEach(t => {
-                  if (t.status === 'for_sale' && t.cost_price < lowestPrice) {
-                    lowestPrice = t.cost_price;
-                  }
-                });
-
                 const theme = getPlatformTheme(pIndex);
                 
                 return (
@@ -711,13 +703,7 @@ export function Dashboard() {
                         const isSellable = ['for_sale', 'active', 'reserved'].includes(ticket.status);
                         let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
                         if (ticket.status === 'sold_pending') {
-                          baseClass = 'bg-gray-100/80 border-gray-200 opacity-90';
-                        } else if (ticket.status === 'active') {
-                          baseClass = 'bg-emerald-50 border-emerald-200 hover:border-emerald-300';
-                        } else if (ticket.status === 'reserved') {
-                          baseClass = 'bg-purple-50 border-purple-200 hover:border-purple-300';
-                        } else if (ticket.status === 'for_sale' && ticket.cost_price === lowestPrice) {
-                          baseClass = 'bg-red-50 border-red-200 hover:border-red-300';
+                          baseClass = 'bg-gray-50/80 border-gray-200 opacity-90';
                         }
 
                         if (batchSellData.selectedTickets[ticket.id]) {
@@ -725,7 +711,7 @@ export function Dashboard() {
                         }
 
                         return (
-                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${baseClass}`} onClick={() => {
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${baseClass} h-[72px]`} onClick={() => {
                           if (isSellable) {
                             setBatchSellData(prev => ({
                               ...prev,
@@ -739,12 +725,7 @@ export function Dashboard() {
                             {tIndex + 1}
                           </div>
 
-                          {/* 状态角标 (最低价 / 待售 / 预约) */}
-                          {ticket.status === 'for_sale' && ticket.cost_price === lowestPrice && (
-                            <div className="absolute -top-2.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
-                              最低
-                            </div>
-                          )}
+                          {/* 状态角标 (待售 / 预约) */}
                           {ticket.status === 'active' && (
                             <div className="absolute -top-2.5 -right-1.5 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
                               待售
@@ -758,16 +739,16 @@ export function Dashboard() {
 
                           {/* 选中状态打勾 */}
                           {!!batchSellData.selectedTickets[ticket.id] && (
-                            <div className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-0.5 shadow-sm z-10">
+                            <div className="absolute bottom-1 left-1.5 bg-primary text-white rounded-full p-0.5 shadow-sm z-10">
                               <Check className="w-3.5 h-3.5" strokeWidth={3} />
                             </div>
                           )}
 
                           {/* 价格显示 */}
-                          <div className="flex items-baseline gap-0.5 mt-2">
+                          <div className={`flex items-baseline gap-0.5 ${ticket.status === 'sold_pending' ? 'mb-1' : 'mt-2'}`}>
                             <span className="text-[10px] text-gray-500 font-medium">¥</span>
-                            <span className={`text-base font-extrabold tracking-tight ${
-                              ticket.status === 'sold_pending' ? 'text-gray-500' : 'text-gray-900'
+                            <span className={`font-extrabold tracking-tight ${
+                              ticket.status === 'sold_pending' ? 'text-gray-500 text-sm' : 'text-gray-900 text-base'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
@@ -775,10 +756,10 @@ export function Dashboard() {
 
                           {/* 核销按钮 */}
                           {ticket.status === 'sold_pending' && (
-                            <div className="mt-2 w-full">
+                            <div className="w-full px-1">
                               <Button 
                                 size="sm" 
-                                className="w-full h-6 rounded-md text-[10px] font-bold px-0 text-gray-600 border border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 shadow-none gap-0.5" 
+                                className="w-full h-5 rounded-md text-[9px] font-bold px-0 text-gray-600 border border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 shadow-none gap-0.5" 
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
