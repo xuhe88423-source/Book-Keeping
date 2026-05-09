@@ -711,7 +711,7 @@ export function Dashboard() {
                         }
 
                         return (
-                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${baseClass} h-[72px]`} onClick={() => {
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-1 cursor-pointer border-2 transition-all ${baseClass} h-[52px]`} onClick={() => {
                           if (isSellable) {
                             setBatchSellData(prev => ({
                               ...prev,
@@ -721,7 +721,7 @@ export function Dashboard() {
                         }}>
                           
                           {/* 序号 */}
-                          <div className="absolute top-1 left-1.5 text-[9px] font-bold text-gray-400">
+                          <div className="absolute top-0.5 left-1.5 text-[10px] font-bold text-gray-400 scale-90 origin-top-left">
                             {tIndex + 1}
                           </div>
 
@@ -739,15 +739,15 @@ export function Dashboard() {
 
                           {/* 选中状态打勾 */}
                           {!!batchSellData.selectedTickets[ticket.id] && (
-                            <div className="absolute bottom-1 left-1.5 bg-primary text-white rounded-full p-0.5 shadow-sm z-10">
-                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            <div className="absolute bottom-1 left-1 bg-primary text-white rounded-full p-0.5 shadow-sm z-10 scale-90 origin-bottom-left">
+                              <Check className="w-3 h-3" strokeWidth={3} />
                             </div>
                           )}
 
                           {/* 价格显示 */}
-                          <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-1' : 'mt-2'}`}>
+                          <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-0.5' : ''}`}>
                             <span className={`font-extrabold tracking-tight ${
-                              ticket.status === 'sold_pending' ? 'text-gray-500 text-xs' : 'text-gray-900 text-xs'
+                              ticket.status === 'sold_pending' ? 'text-gray-500 text-[11px]' : 'text-gray-900 text-[13px]'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
@@ -755,10 +755,10 @@ export function Dashboard() {
 
                           {/* 核销按钮 */}
                           {ticket.status === 'sold_pending' && (
-                            <div className="w-full px-1">
+                            <div className="w-full px-0.5">
                               <Button 
                                 size="sm" 
-                                className="w-full h-5 rounded-md text-[9px] font-bold px-0 text-gray-600 border border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 shadow-none gap-0.5" 
+                                className="w-full h-[18px] rounded-[4px] text-[9px] font-bold px-0 text-gray-600 border border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 shadow-none gap-0.5" 
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
