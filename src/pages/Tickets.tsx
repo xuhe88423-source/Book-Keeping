@@ -76,7 +76,7 @@ function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
         ) : ticket.status === 'reserved' ? (
           <span className="bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">预约</span>
         ) : ticket.status === 'sold_pending' ? (
-          <span className="bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">已售待使用</span>
+          <span className="bg-gray-100 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">已售待使用</span>
         ) : null}
       </div>
         
