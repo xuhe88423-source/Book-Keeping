@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, TrendingUp, Package, CircleDollarSign, Plus } from 'lucide-react';
+import { Wallet, TrendingUp, Package, CircleDollarSign, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, format, subDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -49,6 +49,7 @@ export function Dashboard() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<GlobalProduct | null>(null);
   const [newProductName, setNewProductName] = useState('');
   const [batchSellData, setBatchSellData] = useState<{ total_price: string; quantities: Record<string, number>; sold_at: string }>({
     total_price: '',
@@ -71,6 +72,20 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('创建失败: ' + error.message);
+    }
+  }
+
+  async function handleDeleteProduct() {
+    if (!deleteConfirm) return;
+    try {
+      const { error } = await supabase.from('global_products').delete().eq('id', deleteConfirm.id);
+      if (error) throw error;
+      toast.success('删除成功');
+      setDeleteConfirm(null);
+      setIsDetailOpen(false);
+      fetchDashboardData();
+    } catch (error: any) {
+      toast.error('删除失败: ' + error.message);
     }
   }
 
@@ -444,8 +459,18 @@ export function Dashboard() {
       {/* 商品详情弹窗 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between pr-8">
             <DialogTitle className="text-gray-900 text-xl font-bold">{selectedProduct?.name}</DialogTitle>
+            {selectedProduct && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10 -mt-1" 
+                onClick={() => setDeleteConfirm(selectedProduct)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="flex items-center justify-between text-sm text-gray-500">
@@ -560,6 +585,26 @@ export function Dashboard() {
             </div>
             <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">确认售出</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除商品确认弹窗 */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-destructive/20">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              确认删除?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-gray-600 leading-relaxed">
+            <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除商品 <strong>{deleteConfirm?.name}</strong>。此操作将同时永久删除该商品在所有平台下的优惠券库存，以及关联的所有售出明细记录！</p>
+            <p className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</p>
+          </div>
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>
+            <Button variant="destructive" onClick={handleDeleteProduct} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20">确认删除</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

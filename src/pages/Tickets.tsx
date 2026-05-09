@@ -38,9 +38,8 @@ export function Tickets() {
 
   // Edit & Delete state
   const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
-  const [editProductType, setEditProductType] = useState<{id: string, name: string} | null>(null);
   const [editTicketCost, setEditTicketCost] = useState<{id: string, cost_price: string} | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{type: 'platform' | 'product_type' | 'ticket', id: string, name?: string} | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{type: 'platform' | 'ticket', id: string, name?: string} | null>(null);
 
   // Accordion state
   const [expandedPlatforms, setExpandedPlatforms] = useState<string[] | null>(() => {
@@ -151,20 +150,6 @@ export function Tickets() {
     }
   }
 
-  async function handleEditProductType(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editProductType) return;
-    try {
-      const { error } = await supabase.from('global_products').update({ name: editProductType.name }).eq('id', editProductType.id);
-      if (error) throw error;
-      toast.success('修改成功');
-      setEditProductType(null);
-      fetchData();
-    } catch (error: any) {
-      toast.error('修改失败: ' + error.message);
-    }
-  }
-
   async function handleEditTicket(e: React.FormEvent) {
     e.preventDefault();
     if (!editTicketCost) return;
@@ -185,7 +170,6 @@ export function Tickets() {
     try {
       let table = '';
       if (deleteConfirm.type === 'platform') table = 'platforms';
-      else if (deleteConfirm.type === 'product_type') table = 'global_products';
       else if (deleteConfirm.type === 'ticket') table = 'tickets';
 
       const { error } = await supabase.from(table).delete().eq('id', deleteConfirm.id);
@@ -291,7 +275,7 @@ export function Tickets() {
       ) : platforms.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] font-medium border border-white/50">暂无数据，请先新增平台。</div>
       ) : (
-        <Accordion className="space-y-6" value={expandedPlatforms || []} onValueChange={setExpandedPlatforms}>
+        <Accordion multiple className="space-y-6" value={expandedPlatforms || []} onValueChange={setExpandedPlatforms}>
           {platforms.map((platform, idx) => {
             const theme = getPlatformTheme(idx);
             const platformTotal = getPlatformTotalQuantity(platform.id);
@@ -325,7 +309,7 @@ export function Tickets() {
                 {globalProducts.length === 0 ? (
                    <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">暂无全局商品，请在数据看板中创建</div>
                 ) : (
-                  <Accordion className="space-y-3" value={expandedProducts || []} onValueChange={setExpandedProducts}>
+                  <Accordion multiple className="space-y-3" value={expandedProducts || []} onValueChange={setExpandedProducts}>
                     {globalProducts.map(pt => {
                       const ptTickets = getProductTicketsInPlatform(platform.id, pt.id);
                       const totalQty = ptTickets.reduce((sum, t) => sum + t.quantity, 0);
@@ -342,14 +326,6 @@ export function Tickets() {
                               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                 <div className="text-xs font-medium text-gray-600 bg-white shadow-sm px-2 py-0.5 rounded-full border border-gray-100">
                                   总计: <span className="font-bold text-gray-900">{totalQty}</span>
-                                </div>
-                                <div className="flex items-center">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditProductType({id: pt.id, name: pt.name})}>
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'product_type', id: pt.id, name: pt.name})}>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -466,17 +442,6 @@ export function Tickets() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Product Type Dialog */}
-      <Dialog open={!!editProductType} onOpenChange={(open) => !open && setEditProductType(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
-          <DialogHeader><DialogTitle className="text-gray-900">修改商品名称</DialogTitle></DialogHeader>
-          <form onSubmit={handleEditProductType} className="space-y-4">
-            <Input required value={editProductType?.name || ''} onChange={e => setEditProductType(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
-            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* Edit Ticket Cost Dialog */}
       <Dialog open={!!editTicketCost} onOpenChange={(open) => !open && setEditTicketCost(null)}>
         <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
@@ -499,7 +464,6 @@ export function Tickets() {
           </DialogHeader>
           <div className="py-4 text-gray-600 leading-relaxed">
             {deleteConfirm?.type === 'platform' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除平台 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！</p>}
-            {deleteConfirm?.type === 'product_type' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除商品 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该商品下的所有优惠券库存以及关联的售出明细记录！</p>}
             {deleteConfirm?.type === 'ticket' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！</p>}
             <p className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</p>
           </div>
