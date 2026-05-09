@@ -389,7 +389,7 @@ export function Tickets() {
                                         </div>
                                         
                                         {/* Middle: Quantity Control */}
-                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[95px] shrink-0 ml-1">
+                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[95px] shrink-0 ml-auto">
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
