@@ -53,6 +53,7 @@ export function Dashboard() {
   const [editProduct, setEditProduct] = useState<{id: string, name: string} | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<GlobalProduct | null>(null);
   const [newProductName, setNewProductName] = useState('');
+  const [clearTodayConfirm, setClearTodayConfirm] = useState(false);
   const [batchSellData, setBatchSellData] = useState<{ total_price: string; selectedTickets: Record<string, boolean>; sold_at: string }>({
     total_price: '',
     selectedTickets: {},
@@ -135,6 +136,46 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('核销失败: ' + error.message);
+    }
+  }
+
+  async function handleClearTodaySales() {
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      // 1. Get today's sales to find tickets to revert
+      const { data: todaySales, error: fetchError } = await supabase
+        .from('sales')
+        .select('ticket_id')
+        .eq('sold_at', today);
+
+      if (fetchError) throw fetchError;
+
+      if (todaySales && todaySales.length > 0) {
+        const ticketIds = todaySales.map(s => s.ticket_id);
+        
+        // 2. Revert tickets back to 'for_sale'
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({ status: 'for_sale' })
+          .in('id', ticketIds);
+          
+        if (updateError) throw updateError;
+      }
+
+      // 3. Delete today's sales records
+      const { error: deleteError } = await supabase
+        .from('sales')
+        .delete()
+        .eq('sold_at', today);
+
+      if (deleteError) throw deleteError;
+
+      toast.success('今日销售数据已清空，商品已恢复待售');
+      setClearTodayConfirm(false);
+      fetchDashboardData();
+    } catch (error: any) {
+      toast.error('清空失败: ' + error.message);
     }
   }
 
@@ -458,9 +499,22 @@ export function Dashboard() {
               <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-sm border border-white/50 shrink-0">
                 <TrendingUp className="w-5 h-5 text-emerald-500 stroke-[2.5px]" />
               </div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">今日利润</div>
-                <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between mb-0.5">
+                <div className="text-xs sm:text-sm font-medium text-gray-500 truncate">今日利润</div>
+                {data.todaySoldQuantity > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                    onClick={() => setClearTodayConfirm(true)}
+                    title="清除今日销售数据"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
                   <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.todayProfit.toFixed(2)}</h3>
                   <span className="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 whitespace-nowrap mt-0.5">
                     售出 {data.todaySoldQuantity}
@@ -475,8 +529,10 @@ export function Dashboard() {
               <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100/50 shadow-sm border border-white/50 shrink-0">
                 <Wallet className="w-5 h-5 text-blue-500 stroke-[2.5px]" />
               </div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">本月利润</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="text-xs sm:text-sm font-medium text-gray-500 truncate">本月利润</div>
+                </div>
                 <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
                   <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.monthProfit.toFixed(2)}</h3>
                   <span className="text-[10px] sm:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50 whitespace-nowrap mt-0.5">
@@ -699,6 +755,27 @@ export function Dashboard() {
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>
             <Button variant="destructive" onClick={handleDeleteProduct} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20">确认删除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Today Sales Confirmation Dialog */}
+      <Dialog open={clearTodayConfirm} onOpenChange={setClearTodayConfirm}>
+        <DialogContent className="rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 text-xl flex items-center gap-2">
+              <AlertCircle className="w-6 h-6" />
+              确认清空今日数据？
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-gray-600 leading-relaxed">
+            <div className="text-sm mt-3 bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100/50 font-medium">
+              此操作将<strong>撤销今天（{format(new Date(), 'yyyy-MM-dd')}）产生的所有售出记录</strong>，相关的商品状态也会自动恢复为“待售”。
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-2">
+            <Button variant="outline" onClick={() => setClearTodayConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200">取消</Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearTodaySales}>确认撤销</Button>
           </div>
         </DialogContent>
       </Dialog>
