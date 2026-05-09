@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Platform, Ticket, GlobalProduct } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Plus, Tag, Store, Minus, Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Tag, Store, Pencil, Trash2, AlertCircle, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -19,6 +19,74 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: ticket.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
+      {/* Drag handle */}
+      <div {...attributes} {...listeners} className="cursor-grab hover:text-primary text-gray-400 active:cursor-grabbing px-1">
+        <GripVertical className="w-5 h-5" />
+      </div>
+      
+      {/* Left: Price */}
+      <div className="flex flex-col shrink-0 min-w-[70px]">
+        <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
+        <div className="flex items-center gap-0.5">
+          <span className="text-gray-900 font-bold text-base tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
+          <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => onEdit(ticket)}>
+            <Pencil className="w-2.5 h-2.5" />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Middle: Status Badge */}
+      <div className="flex-1 flex justify-center">
+        {ticket.status === 'for_sale' ? (
+          <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">待售</span>
+        ) : ticket.status === 'sold_pending' ? (
+          <span className="bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">已售待使用</span>
+        ) : null}
+      </div>
+        
+      {/* Right: Actions */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-gray-400 hover:text-destructive hover:bg-destructive/10 shrink-0" onClick={() => onDelete(ticket)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function Tickets() {
   const { showDbError } = useError();
@@ -34,7 +102,7 @@ export function Tickets() {
   const [isAddTicketOpen, setIsAddTicketOpen] = useState(false);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [newTicket, setNewTicket] = useState({ cost_price: '', quantity: '' });
+  const [newTicket, setNewTicket] = useState({ cost_price: '' });
 
   // Edit & Delete state
   const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
@@ -46,22 +114,23 @@ export function Tickets() {
     const saved = localStorage.getItem('expandedPlatforms');
     return saved ? JSON.parse(saved) : null;
   });
-  const [expandedProducts, setExpandedProducts] = useState<string[] | null>(() => {
-    const saved = localStorage.getItem('expandedProducts');
-    return saved ? JSON.parse(saved) : null;
-  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (expandedPlatforms !== null) {
       localStorage.setItem('expandedPlatforms', JSON.stringify(expandedPlatforms));
     }
   }, [expandedPlatforms]);
-
-  useEffect(() => {
-    if (expandedProducts !== null) {
-      localStorage.setItem('expandedProducts', JSON.stringify(expandedProducts));
-    }
-  }, [expandedProducts]);
 
   useEffect(() => {
     fetchData(true);
@@ -73,7 +142,7 @@ export function Tickets() {
       const [platformsRes, productsRes, ticketsRes] = await Promise.all([
         supabase.from('platforms').select('*').order('created_at', { ascending: true }),
         supabase.from('global_products').select('*').order('created_at', { ascending: true }),
-        supabase.from('tickets').select('*').order('created_at', { ascending: true })
+        supabase.from('tickets').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true })
       ]);
 
       if (platformsRes.error) throw platformsRes.error;
@@ -84,9 +153,7 @@ export function Tickets() {
       setGlobalProducts(productsRes.data || []);
       setTickets(ticketsRes.data || []);
       
-      // Default expand all if not set in local storage yet
       setExpandedPlatforms(prev => prev === null ? (platformsRes.data || []).map(p => p.id) : prev);
-      setExpandedProducts(prev => prev === null ? (productsRes.data || []).map(pt => pt.id) : prev);
     } catch (error: any) {
       if (error?.message === 'Failed to fetch' || error?.code === 'PGRST301' || !navigator.onLine) {
         showDbError();
@@ -98,7 +165,6 @@ export function Tickets() {
     }
   }
 
-  // ---- Add Handlers ----
   async function handleAddPlatform(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -117,25 +183,29 @@ export function Tickets() {
     e.preventDefault();
     if (!selectedPlatformId || !selectedProductId) return;
     try {
+      const ptTickets = tickets.filter(t => t.platform_id === selectedPlatformId && t.global_product_id === selectedProductId);
+      const maxSortOrder = ptTickets.length > 0 ? Math.max(...ptTickets.map(t => t.sort_order || 0)) : 0;
+
       const { error } = await supabase.from('tickets').insert([
         {
           platform_id: selectedPlatformId,
           global_product_id: selectedProductId,
           cost_price: parseFloat(newTicket.cost_price),
-          quantity: parseInt(newTicket.quantity),
+          quantity: 1,
+          status: 'for_sale',
+          sort_order: maxSortOrder + 1,
         }
       ]);
       if (error) throw error;
-      toast.success('优惠券添加成功');
+      toast.success('价格单添加成功');
       setIsAddTicketOpen(false);
-      setNewTicket({ cost_price: '', quantity: '' });
+      setNewTicket({ cost_price: '' });
       fetchData(false);
     } catch (error: any) {
       toast.error('添加失败: ' + error.message);
     }
   }
 
-  // ---- Edit Handlers ----
   async function handleEditPlatform(e: React.FormEvent) {
     e.preventDefault();
     if (!editPlatform) return;
@@ -164,7 +234,6 @@ export function Tickets() {
     }
   }
 
-  // ---- Delete Handler ----
   async function handleDelete() {
     if (!deleteConfirm) return;
     try {
@@ -182,52 +251,54 @@ export function Tickets() {
     }
   }
 
-  // ---- Quick Adjust Handlers ----
-  async function handleQuickAdd(ticket: Ticket) {
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ quantity: ticket.quantity + 1 })
-        .eq('id', ticket.id);
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-      if (error) throw error;
-      toast.success('已快速增加 1 张');
-      fetchData(false);
-    } catch (error: any) {
-      toast.error('增加数量失败: ' + error.message);
-    }
-  }
+    const activeTicket = tickets.find(t => t.id === active.id);
+    if (!activeTicket) return;
 
-  async function handleQuickDecrease(ticket: Ticket) {
-    if (ticket.quantity <= 0) {
-      toast.error('库存已为 0');
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ quantity: ticket.quantity - 1 })
-        .eq('id', ticket.id);
+    const platformId = activeTicket.platform_id;
+    const productId = activeTicket.global_product_id;
 
-      if (error) throw error;
-      
-      if (ticket.quantity - 1 === 0) {
-        toast.success('票据数量为0，已自动隐藏');
-      } else {
-        toast.success('已快速减少 1 张');
+    const ptTickets = tickets
+      .filter(t => t.platform_id === platformId && t.global_product_id === productId && t.status !== 'used')
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    const oldIndex = ptTickets.findIndex(item => item.id === active.id);
+    const newIndex = ptTickets.findIndex(item => item.id === over.id);
+
+    const newPtTickets = arrayMove(ptTickets, oldIndex, newIndex);
+
+    const updates = newPtTickets.map((t, index) => ({
+      id: t.id,
+      sort_order: index
+    }));
+
+    setTickets(prev => prev.map(t => {
+      const update = updates.find(u => u.id === t.id);
+      if (update) {
+        return { ...t, sort_order: update.sort_order };
       }
-      fetchData(false);
-    } catch (error: any) {
-      toast.error('减少数量失败: ' + error.message);
+      return t;
+    }));
+
+    try {
+      await Promise.all(updates.map(update => 
+        supabase.from('tickets').update({ sort_order: update.sort_order }).eq('id', update.id)
+      ));
+    } catch(err) {
+      console.error('Failed to update sort order', err);
     }
   }
 
   const getPlatformTotalQuantity = (platformId: string) => {
-    return tickets.filter(t => t.platform_id === platformId).reduce((sum, t) => sum + t.quantity, 0);
+    // 只有待售状态的才算作有效库存数量
+    return tickets.filter(t => t.platform_id === platformId && t.status === 'for_sale').length;
   };
 
   const getProductTicketsInPlatform = (platformId: string, productId: string) => {
-    return tickets.filter(t => t.platform_id === platformId && t.global_product_id === productId);
+    return tickets.filter(t => t.platform_id === platformId && t.global_product_id === productId && t.status !== 'used').sort((a, b) => a.sort_order - b.sort_order);
   };
 
   const getPlatformTheme = (index: number) => {
@@ -294,12 +365,12 @@ export function Tickets() {
                       总计: <span className="font-bold text-gray-900">{platformTotal}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10" onClick={() => setEditPlatform({id: platform.id, name: platform.name})}>
+                      <div role="button" className="h-9 w-9 rounded-full text-gray-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors" onClick={() => setEditPlatform({id: platform.id, name: platform.name})}>
                         <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({type: 'platform', id: platform.id, name: platform.name})}>
+                      </div>
+                      <div role="button" className="h-9 w-9 rounded-full text-gray-400 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors" onClick={() => setDeleteConfirm({type: 'platform', id: platform.id, name: platform.name})}>
                         <Trash2 className="w-4 h-4" />
-                      </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -309,120 +380,83 @@ export function Tickets() {
                 {globalProducts.length === 0 ? (
                    <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">暂无全局商品，请在数据看板中创建</div>
                 ) : (
-                  <Accordion multiple className="space-y-3" value={expandedProducts || []} onValueChange={setExpandedProducts}>
+                  <div className="space-y-4">
                     {globalProducts.map(pt => {
                       const ptTickets = getProductTicketsInPlatform(platform.id, pt.id);
-                      const totalQty = ptTickets.reduce((sum, t) => sum + t.quantity, 0);
+                      
                       return (
-                        <AccordionItem value={pt.id} key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-2xl px-3 sm:px-4 overflow-hidden shadow-sm">
-                          <AccordionTrigger className="hover:no-underline py-3">
-                            <div className="flex justify-between items-center w-full pr-1">
-                              <div className="flex items-center gap-2 font-semibold text-gray-800 text-base">
-                                <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
-                                  <Tag className="w-3.5 h-3.5" />
-                                </div>
-                                <span className="truncate max-w-[120px] sm:max-w-[200px]">{pt.name}</span>
+                        <div key={pt.id} className="bg-gray-50/80 backdrop-blur-md border border-white/60 rounded-2xl px-3 sm:px-4 py-3 overflow-hidden shadow-sm">
+                          <div className="flex justify-between items-center w-full mb-3">
+                            <div className="flex items-center gap-2 font-semibold text-gray-800 text-base">
+                              <div className="p-1.5 bg-blue-100/50 text-blue-600 rounded-lg">
+                                <Tag className="w-3.5 h-3.5" />
                               </div>
-                              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                <div className="text-xs font-medium text-gray-600 bg-white shadow-sm px-2 py-0.5 rounded-full border border-gray-100">
-                                  总计: <span className="font-bold text-gray-900">{totalQty}</span>
-                                </div>
-                              </div>
+                              <span className="truncate max-w-[120px] sm:max-w-[200px]">{pt.name}</span>
                             </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="pt-1 pb-4">
-                            <div className="space-y-3">
-                              
-                              <div className="flex justify-end gap-2">
-                                <Dialog open={isAddTicketOpen && selectedPlatformId === platform.id && selectedProductId === pt.id} onOpenChange={(open) => {
-                                  setIsAddTicketOpen(open);
-                                  if (open) {
-                                    setSelectedPlatformId(platform.id);
-                                    setSelectedProductId(pt.id);
-                                  }
-                                }}>
-                                  <DialogTrigger
-                                    render={
-                                      <Button variant="outline" size="sm" className="gap-1 h-7 text-xs rounded-lg border-gray-200 bg-white shadow-sm font-medium px-3">
-                                        <Plus className="w-3 h-3" />
-                                        添加进货
-                                      </Button>
-                                    }
-                                  />
-                                  <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-gray-900">添加优惠券 - {pt.name}</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={handleAddTicket} className="space-y-5 mt-2">
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-gray-700">成本价 (元)</label>
-                                          <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-gray-700">初始数量</label>
-                                          <Input required type="number" min="1" value={newTicket.quantity} onChange={e => setNewTicket({...newTicket, quantity: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
-                                        </div>
-                                      </div>
-                                      <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
-                                    </form>
-                                  </DialogContent>
-                                </Dialog>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs font-medium text-gray-600 bg-white shadow-sm px-2 py-0.5 rounded-full border border-gray-100">
+                                数量: <span className="font-bold text-gray-900">{ptTickets.length}</span>
                               </div>
-
-                              {ptTickets.filter(t => t.quantity > 0).length === 0 ? (
-                                <div className="text-center py-3 text-xs text-gray-400">暂无具体优惠券记录</div>
-                              ) : (
-                                <div className="flex flex-col gap-2">
-                                  {ptTickets.filter(t => t.quantity > 0).map(ticket => (
-                                    <div key={ticket.id} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
-                                        
-                                        {/* Left: Price */}
-                                        <div className="flex flex-col shrink-0 min-w-[70px]">
-                                          <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
-                                          <div className="flex items-center gap-0.5">
-                                            <span className="text-gray-900 font-bold text-base tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
-                                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => setEditTicketCost({id: ticket.id, cost_price: ticket.cost_price.toString()})}>
-                                              <Pencil className="w-2.5 h-2.5" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Middle: Quantity Control */}
-                                        <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-full w-[95px] shrink-0 ml-auto">
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-7 w-7 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-destructive shrink-0"
-                                            onClick={() => handleQuickDecrease(ticket)}
-                                            disabled={ticket.quantity <= 0}
-                                          >
-                                            <Minus className="w-3.5 h-3.5" />
-                                          </Button>
-                                          <span className="font-bold text-gray-900 text-center text-sm flex-1">{ticket.quantity}</span>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-7 w-7 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-gray-700 hover:text-primary shrink-0"
-                                            onClick={() => handleQuickAdd(ticket)}
-                                          >
-                                            <Plus className="w-3.5 h-3.5" />
-                                          </Button>
-                                        </div>
-                                          
-                                        {/* Right: Sell & Delete */}
-                                        <div className="hidden">
-                                        </div>
+                              <Dialog open={isAddTicketOpen && selectedPlatformId === platform.id && selectedProductId === pt.id} onOpenChange={(open) => {
+                                setIsAddTicketOpen(open);
+                                if (open) {
+                                  setSelectedPlatformId(platform.id);
+                                  setSelectedProductId(pt.id);
+                                }
+                              }}>
+                                <DialogTrigger
+                                  render={
+                                    <Button variant="outline" size="sm" className="gap-1 h-7 text-xs rounded-lg border-gray-200 bg-white shadow-sm font-medium px-2">
+                                      <Plus className="w-3 h-3" />
+                                      创建单据
+                                    </Button>
+                                  }
+                                />
+                                <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-gray-900">创建单据 - {pt.name}</DialogTitle>
+                                  </DialogHeader>
+                                  <form onSubmit={handleAddTicket} className="space-y-5 mt-2">
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium text-gray-700">成本价 (元)</label>
+                                      <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                     </div>
+                                    <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </div>
+
+                          {ptTickets.length === 0 ? (
+                            <div className="text-center py-3 text-xs text-gray-400">暂无具体单据记录</div>
+                          ) : (
+                            <DndContext 
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <SortableContext 
+                                items={ptTickets.map(t => t.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="flex flex-col gap-2">
+                                  {ptTickets.map(ticket => (
+                                    <SortableTicketItem 
+                                      key={ticket.id} 
+                                      ticket={ticket} 
+                                      onEdit={(t: Ticket) => setEditTicketCost({id: t.id, cost_price: t.cost_price.toString()})}
+                                      onDelete={(t: Ticket) => setDeleteConfirm({type: 'ticket', id: t.id})}
+                                    />
                                   ))}
                                 </div>
-                              )}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
+                              </SortableContext>
+                            </DndContext>
+                          )}
+                        </div>
                       );
                     })}
-                  </Accordion>
+                  </div>
                 )}
               </AccordionContent>
             </AccordionItem>
@@ -463,9 +497,9 @@ export function Tickets() {
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-gray-600 leading-relaxed">
-            {deleteConfirm?.type === 'platform' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除平台 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！</p>}
-            {deleteConfirm?.type === 'ticket' && <p className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！</p>}
-            <p className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</p>
+            {deleteConfirm?.type === 'platform' && <div className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除平台 <strong>{deleteConfirm.name}</strong>。此操作将同时永久删除该平台下的所有商品、优惠券以及关联的售出明细记录！</div>}
+            {deleteConfirm?.type === 'ticket' && <div className="text-sm mt-3 bg-destructive/10 text-destructive p-4 rounded-2xl border border-destructive/20 font-medium">您即将删除该条优惠券进货记录。此操作将同时永久删除关联的售出明细记录！</div>}
+            <div className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>

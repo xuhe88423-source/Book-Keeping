@@ -16,6 +16,8 @@ export interface Ticket {
   platform_id: string;
   cost_price: number;
   quantity: number;
+  status: 'for_sale' | 'sold_pending' | 'used';
+  sort_order: number;
   created_at: string;
 }
 
@@ -25,6 +27,8 @@ export interface Sale {
   sell_price: number;
   quantity: number;
   profit: number;
+  batch_id: string;
+  fee: number;
   sold_at: string;
   created_at: string;
 }
