@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Dashboard } from '@/pages/Dashboard';
 import { Tickets } from '@/pages/Tickets';
@@ -9,7 +9,7 @@ import { ErrorProvider } from '@/contexts/ErrorContext';
 function App() {
   return (
     <ErrorProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
@@ -18,7 +18,7 @@ function App() {
           </Route>
         </Routes>
         <Toaster position="top-center" richColors />
-      </BrowserRouter>
+      </HashRouter>
     </ErrorProvider>
   );
 }
