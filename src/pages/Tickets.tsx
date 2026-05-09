@@ -411,7 +411,7 @@ export function Tickets() {
                                         </div>
                                           
                                         {/* Right: Sell & Delete */}
-                                        <div className="flex items-center gap-1 flex-1 justify-end min-w-0">
+                                        <div className="hidden">
                                         </div>
                                     </div>
                                   ))}
