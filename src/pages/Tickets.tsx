@@ -73,6 +73,8 @@ function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
       <div className="flex-1 flex justify-center">
         {ticket.status === 'for_sale' ? (
           <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">待售</span>
+        ) : ticket.status === 'reserved' ? (
+          <span className="bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">预约</span>
         ) : ticket.status === 'sold_pending' ? (
           <span className="bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">已售待使用</span>
         ) : null}

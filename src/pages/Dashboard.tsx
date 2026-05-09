@@ -124,6 +124,46 @@ export function Dashboard() {
     }
   }
 
+  async function handleUpdateTicketStatus(ticketId: string, newStatus: 'for_sale' | 'reserved') {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: newStatus })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+      
+      if (selectedProduct) {
+        setSelectedProduct(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            platformDetails: prev.platformDetails.map(p => ({
+              ...p,
+              tickets: p.tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t)
+            }))
+          };
+        });
+      }
+      
+      if (newStatus === 'reserved') {
+        setBatchSellData(prev => {
+          const newSelected = { ...prev.selectedTickets };
+          delete newSelected[ticketId];
+          return { ...prev, selectedTickets: newSelected };
+        });
+      }
+
+      fetchDashboardData(false);
+    } catch (error: any) {
+      toast.error('状态更新失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleWriteOff(ticketId: string) {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -648,14 +688,12 @@ export function Dashboard() {
                   });
                 if (availableTickets.length === 0) return null;
                 
-                // 计算全局最低价
+                // 计算该平台最低价
                 let lowestPrice = Infinity;
-                selectedProduct?.platformDetails.forEach(platform => {
-                  platform.tickets.forEach(t => {
-                    if (t.status === 'for_sale' && t.cost_price < lowestPrice) {
-                      lowestPrice = t.cost_price;
-                    }
-                  });
+                availableTickets.forEach(t => {
+                  if (t.status === 'for_sale' && t.cost_price < lowestPrice) {
+                    lowestPrice = t.cost_price;
+                  }
                 });
 
                 const theme = getPlatformTheme(pIndex);
@@ -669,32 +707,29 @@ export function Dashboard() {
                       </div>
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-                      {availableTickets.map(ticket => (
-                        <label key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 sm:p-3 cursor-pointer border-2 transition-all ${
-                          ticket.status !== 'for_sale' 
+                    <div className="grid grid-cols-4 gap-2">
+                      {availableTickets.map((ticket, tIndex) => (
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${
+                          ticket.status === 'sold_pending' 
                             ? 'bg-orange-50/50 border-orange-100 opacity-90' // sold_pending
-                            : ticket.cost_price === lowestPrice
+                            : ticket.cost_price === lowestPrice && ticket.status === 'for_sale'
                               ? 'bg-red-50 border-red-200 hover:border-red-300' // lowest price
                               : 'bg-white border-gray-100 hover:border-primary/30 shadow-sm' // normal
                         } ${
                           !!batchSellData.selectedTickets[ticket.id] ? '!border-primary bg-primary/5 shadow-md' : ''
-                        }`}>
+                        }`} onClick={() => {
+                          if (ticket.status === 'for_sale') {
+                            setBatchSellData(prev => ({
+                              ...prev,
+                              selectedTickets: { ...prev.selectedTickets, [ticket.id]: !prev.selectedTickets[ticket.id] }
+                            }))
+                          }
+                        }}>
                           
-                          {ticket.status === 'for_sale' && (
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer"
-                              disabled={ticket.status !== 'for_sale'}
-                              checked={!!batchSellData.selectedTickets[ticket.id]}
-                              onChange={e => {
-                                setBatchSellData(prev => ({
-                                  ...prev,
-                                  selectedTickets: { ...prev.selectedTickets, [ticket.id]: e.target.checked }
-                                }))
-                              }}
-                            />
-                          )}
+                          {/* 序号 */}
+                          <div className="absolute top-1 left-1.5 text-[9px] font-bold text-gray-400">
+                            {tIndex + 1}
+                          </div>
 
                           {/* 最低价高亮角标 */}
                           {ticket.status === 'for_sale' && ticket.cost_price === lowestPrice && (
@@ -711,15 +746,35 @@ export function Dashboard() {
                           )}
 
                           {/* 价格显示 */}
-                          <div className="flex items-baseline gap-0.5">
+                          <div className="flex items-baseline gap-0.5 mt-2">
                             <span className="text-[10px] text-gray-500 font-medium">¥</span>
-                            <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${
-                              ticket.status !== 'for_sale' ? 'text-orange-700/70' :
-                              ticket.cost_price === lowestPrice ? 'text-red-600' : 'text-gray-900'
+                            <span className={`text-base font-extrabold tracking-tight ${
+                              ticket.status === 'sold_pending' ? 'text-orange-700/70' :
+                              ticket.cost_price === lowestPrice && ticket.status === 'for_sale' ? 'text-red-600' : 'text-gray-900'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
                           </div>
+
+                          {/* 状态切换按钮 */}
+                          {ticket.status !== 'sold_pending' && (
+                            <div className="flex items-center gap-1 mt-1.5 w-full justify-center">
+                              <div 
+                                role="button"
+                                onClick={(e) => { e.stopPropagation(); handleUpdateTicketStatus(ticket.id, 'for_sale'); }}
+                                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-colors ${ticket.status === 'for_sale' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-emerald-50 hover:text-emerald-500'}`}
+                              >
+                                待售
+                              </div>
+                              <div 
+                                role="button"
+                                onClick={(e) => { e.stopPropagation(); handleUpdateTicketStatus(ticket.id, 'reserved'); }}
+                                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-colors ${ticket.status === 'reserved' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-purple-50 hover:text-purple-500'}`}
+                              >
+                                预约
+                              </div>
+                            </div>
+                          )}
 
                           {/* 核销按钮 */}
                           {ticket.status === 'sold_pending' && (
@@ -738,7 +793,7 @@ export function Dashboard() {
                               </Button>
                             </div>
                           )}
-                        </label>
+                        </div>
                       ))}
                     </div>
                   </div>

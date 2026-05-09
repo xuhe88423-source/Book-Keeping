@@ -16,7 +16,7 @@ export interface Ticket {
   platform_id: string;
   cost_price: number;
   quantity: number;
-  status: 'for_sale' | 'sold_pending' | 'used';
+  status: 'for_sale' | 'reserved' | 'sold_pending' | 'used';
   sort_order: number;
   created_at: string;
 }
