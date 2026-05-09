@@ -124,14 +124,19 @@ export function Dashboard() {
     }
   }
 
-  async function handleUpdateTicketStatus(ticketId: string, newStatus: 'for_sale' | 'reserved') {
+  async function handleBatchUpdateStatus(newStatus: 'active' | 'reserved') {
+    const selectedIds = Object.entries(batchSellData.selectedTickets).filter(([_, selected]) => selected).map(([id]) => id);
+    if (selectedIds.length === 0) {
+      toast.error('请至少选择一张单据');
+      return;
+    }
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from('tickets')
         .update({ status: newStatus })
-        .eq('id', ticketId);
+        .in('id', selectedIds);
 
       if (error) throw error;
       
@@ -142,20 +147,14 @@ export function Dashboard() {
             ...prev,
             platformDetails: prev.platformDetails.map(p => ({
               ...p,
-              tickets: p.tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t)
+              tickets: p.tickets.map(t => selectedIds.includes(t.id) ? { ...t, status: newStatus } : t)
             }))
           };
         });
       }
       
-      if (newStatus === 'reserved') {
-        setBatchSellData(prev => {
-          const newSelected = { ...prev.selectedTickets };
-          delete newSelected[ticketId];
-          return { ...prev, selectedTickets: newSelected };
-        });
-      }
-
+      setBatchSellData(prev => ({ ...prev, selectedTickets: {} }));
+      toast.success('状态更新成功');
       fetchDashboardData(false);
     } catch (error: any) {
       toast.error('状态更新失败: ' + error.message);
@@ -268,8 +267,8 @@ export function Dashboard() {
 
           if (gp.tickets) {
             gp.tickets.forEach((t: any) => {
-              // 无论是全局总数量、单品总数量，还是全局总价值，都只计算处于 'for_sale'（待售）状态的库存
-              if (t.status === 'for_sale') {
+              // 无论是全局总数量、单品总数量，还是全局总价值，都只计算处于未售出状态的库存
+              if (['for_sale', 'active', 'reserved'].includes(t.status)) {
                 gpTotalQty += 1;
               }
 
@@ -447,7 +446,7 @@ export function Dashboard() {
         }
       }
 
-      if (!foundTicket || foundTicket.status !== 'for_sale') continue;
+      if (!foundTicket || !['for_sale', 'active', 'reserved'].includes(foundTicket.status)) continue;
       
       const profit = avgSellPrice - foundTicket.cost_price - avgFee;
 
@@ -691,7 +690,7 @@ export function Dashboard() {
                 // 计算该平台最低价
                 let lowestPrice = Infinity;
                 availableTickets.forEach(t => {
-                  if (t.status === 'for_sale' && t.cost_price < lowestPrice) {
+                  if (['for_sale', 'active', 'reserved'].includes(t.status) && t.cost_price < lowestPrice) {
                     lowestPrice = t.cost_price;
                   }
                 });
@@ -708,17 +707,26 @@ export function Dashboard() {
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                      {availableTickets.map((ticket, tIndex) => (
-                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${
-                          ticket.status === 'sold_pending' 
-                            ? 'bg-orange-50/50 border-orange-100 opacity-90' // sold_pending
-                            : ticket.cost_price === lowestPrice && ticket.status === 'for_sale'
-                              ? 'bg-red-50 border-red-200 hover:border-red-300' // lowest price
-                              : 'bg-white border-gray-100 hover:border-primary/30 shadow-sm' // normal
-                        } ${
-                          !!batchSellData.selectedTickets[ticket.id] ? '!border-primary bg-primary/5 shadow-md' : ''
-                        }`} onClick={() => {
-                          if (ticket.status === 'for_sale') {
+                      {availableTickets.map((ticket, tIndex) => {
+                        const isSellable = ['for_sale', 'active', 'reserved'].includes(ticket.status);
+                        let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
+                        if (ticket.status === 'sold_pending') {
+                          baseClass = 'bg-orange-50/50 border-orange-100 opacity-90';
+                        } else if (ticket.status === 'active') {
+                          baseClass = 'bg-emerald-100/60 border-emerald-300 hover:border-emerald-400';
+                        } else if (ticket.status === 'reserved') {
+                          baseClass = 'bg-purple-100/60 border-purple-300 hover:border-purple-400';
+                        } else if (ticket.cost_price === lowestPrice && isSellable) {
+                          baseClass = 'bg-red-50 border-red-200 hover:border-red-300';
+                        }
+
+                        if (batchSellData.selectedTickets[ticket.id]) {
+                          baseClass += ' !border-primary shadow-md';
+                        }
+
+                        return (
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 cursor-pointer border-2 transition-all ${baseClass}`} onClick={() => {
+                          if (isSellable) {
                             setBatchSellData(prev => ({
                               ...prev,
                               selectedTickets: { ...prev.selectedTickets, [ticket.id]: !prev.selectedTickets[ticket.id] }
@@ -732,7 +740,7 @@ export function Dashboard() {
                           </div>
 
                           {/* 最低价高亮角标 */}
-                          {ticket.status === 'for_sale' && ticket.cost_price === lowestPrice && (
+                          {isSellable && ticket.cost_price === lowestPrice && (
                             <div className="absolute -top-2.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
                               最低
                             </div>
@@ -749,32 +757,11 @@ export function Dashboard() {
                           <div className="flex items-baseline gap-0.5 mt-2">
                             <span className="text-[10px] text-gray-500 font-medium">¥</span>
                             <span className={`text-base font-extrabold tracking-tight ${
-                              ticket.status === 'sold_pending' ? 'text-orange-700/70' :
-                              ticket.cost_price === lowestPrice && ticket.status === 'for_sale' ? 'text-red-600' : 'text-gray-900'
+                              ticket.status === 'sold_pending' ? 'text-orange-700/70' : 'text-gray-900'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
                           </div>
-
-                          {/* 状态切换按钮 */}
-                          {ticket.status !== 'sold_pending' && (
-                            <div className="flex items-center gap-1 mt-1.5 w-full justify-center">
-                              <div 
-                                role="button"
-                                onClick={(e) => { e.stopPropagation(); handleUpdateTicketStatus(ticket.id, 'for_sale'); }}
-                                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-colors ${ticket.status === 'for_sale' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-emerald-50 hover:text-emerald-500'}`}
-                              >
-                                待售
-                              </div>
-                              <div 
-                                role="button"
-                                onClick={(e) => { e.stopPropagation(); handleUpdateTicketStatus(ticket.id, 'reserved'); }}
-                                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-colors ${ticket.status === 'reserved' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-purple-50 hover:text-purple-500'}`}
-                              >
-                                预约
-                              </div>
-                            </div>
-                          )}
 
                           {/* 核销按钮 */}
                           {ticket.status === 'sold_pending' && (
@@ -794,7 +781,7 @@ export function Dashboard() {
                             </div>
                           )}
                         </div>
-                      ))}
+                      )})}
                     </div>
                   </div>
                 );
@@ -826,13 +813,31 @@ export function Dashboard() {
                   <Trash2 className="w-5 h-5" />
                 </Button>
               )}
-              <Button 
-                className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
-                onClick={handleSellTicket}
-                disabled={isSubmitting || Object.values(batchSellData.selectedTickets).filter(v => v).length === 0}
-              >
-                {isSubmitting ? '处理中...' : '售卖'}
-              </Button>
+              <div className="flex flex-1 gap-2">
+                <Button 
+                  className="flex-[2] rounded-xl h-12 font-bold shadow-lg shadow-primary/20"
+                  onClick={handleSellTicket}
+                  disabled={isSubmitting || Object.values(batchSellData.selectedTickets).filter(v => v).length === 0}
+                >
+                  {isSubmitting ? '处理中...' : '售卖'}
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="flex-1 rounded-xl h-12 font-bold border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-700 px-0"
+                  onClick={() => handleBatchUpdateStatus('active')}
+                  disabled={isSubmitting || Object.values(batchSellData.selectedTickets).filter(v => v).length === 0}
+                >
+                  待售
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="flex-1 rounded-xl h-12 font-bold border-purple-200 text-purple-600 bg-purple-50 hover:bg-purple-100 hover:text-purple-700 px-0"
+                  onClick={() => handleBatchUpdateStatus('reserved')}
+                  disabled={isSubmitting || Object.values(batchSellData.selectedTickets).filter(v => v).length === 0}
+                >
+                  预约
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

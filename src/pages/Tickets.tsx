@@ -71,7 +71,7 @@ function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
       
       {/* Middle: Status Badge */}
       <div className="flex-1 flex justify-center">
-        {ticket.status === 'for_sale' ? (
+        {ticket.status === 'active' ? (
           <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">待售</span>
         ) : ticket.status === 'reserved' ? (
           <span className="bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">预约</span>
@@ -313,8 +313,8 @@ export function Tickets() {
   }
 
   const getPlatformTotalQuantity = (platformId: string) => {
-    // 只有待售状态的才算作有效库存数量
-    return tickets.filter(t => t.platform_id === platformId && t.status === 'for_sale').length;
+    // 只有未售出状态的才算作有效库存数量
+    return tickets.filter(t => t.platform_id === platformId && ['for_sale', 'active', 'reserved'].includes(t.status)).length;
   };
 
   const getProductTicketsInPlatform = (platformId: string, productId: string) => {
