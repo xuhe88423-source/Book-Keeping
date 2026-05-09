@@ -58,6 +58,7 @@ export function Sales() {
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [undoConfirm, setUndoConfirm] = useState<GroupedSale | null>(null);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -152,7 +153,8 @@ export function Sales() {
   }
 
   async function handleUndoSale() {
-    if (!undoConfirm) return;
+    if (!undoConfirm || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const ticketIds = undoConfirm.items.map(item => item.ticket_id);
       
@@ -180,10 +182,14 @@ export function Sales() {
       fetchSales();
     } catch (error: any) {
       toast.error('撤销失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleClearAllSales() {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('sales').delete().not('id', 'is', null);
       if (error) throw error;
@@ -192,6 +198,8 @@ export function Sales() {
       fetchSales();
     } catch (error: any) {
       toast.error('清空失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -356,8 +364,10 @@ export function Sales() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setUndoConfirm(null)} className="rounded-2xl h-12 px-6 border-gray-200">取消</Button>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-orange-500/20 font-bold" onClick={handleUndoSale}>确认撤销</Button>
+            <Button variant="outline" onClick={() => setUndoConfirm(null)} className="rounded-2xl h-12 px-6 border-gray-200" disabled={isSubmitting}>取消</Button>
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-orange-500/20 font-bold" onClick={handleUndoSale} disabled={isSubmitting}>
+              {isSubmitting ? '处理中...' : '确认撤销'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -379,8 +389,10 @@ export function Sales() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setClearConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200">取消</Button>
-            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearAllSales}>确认清空</Button>
+            <Button variant="outline" onClick={() => setClearConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200" disabled={isSubmitting}>取消</Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearAllSales} disabled={isSubmitting}>
+              {isSubmitting ? '清空中...' : '确认清空'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

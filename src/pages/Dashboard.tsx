@@ -48,6 +48,7 @@ export function Dashboard() {
     globalProducts: []
   });
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cross-platform sell states
   const [selectedProduct, setSelectedProduct] = useState<GlobalProduct | null>(null);
@@ -70,6 +71,8 @@ export function Dashboard() {
 
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('global_products').insert([{ name: newProductName }]);
       if (error) throw error;
@@ -79,12 +82,15 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('创建失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleEditProduct(e: React.FormEvent) {
     e.preventDefault();
-    if (!editProduct) return;
+    if (!editProduct || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('global_products').update({ name: editProduct.name }).eq('id', editProduct.id);
       if (error) throw error;
@@ -97,11 +103,14 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleDeleteProduct() {
-    if (!deleteConfirm) return;
+    if (!deleteConfirm || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('global_products').delete().eq('id', deleteConfirm.id);
       if (error) throw error;
@@ -111,10 +120,14 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('删除失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleWriteOff(ticketId: string) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from('tickets')
@@ -140,10 +153,14 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('核销失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleClearTodaySales() {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
       
@@ -170,6 +187,8 @@ export function Dashboard() {
       });
     } catch (error: any) {
       toast.error('归零失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -348,7 +367,7 @@ export function Dashboard() {
 
   async function handleSellTicket(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedProduct) return;
+    if (!selectedProduct || isSubmitting) return;
 
     const totalSellPrice = parseFloat(batchSellData.total_price);
     if (isNaN(totalSellPrice) || totalSellPrice < 0) {
@@ -362,6 +381,7 @@ export function Dashboard() {
       return;
     }
 
+    setIsSubmitting(true);
     const totalQty = ticketsToSell.length;
     const avgSellPrice = totalSellPrice / totalQty;
     const totalFee = totalSellPrice * 0.006;
@@ -400,6 +420,7 @@ export function Dashboard() {
 
     if (saleRecords.length === 0) {
       toast.error('没有有效的待售单据可以售出');
+      setIsSubmitting(false);
       return;
     }
 
@@ -421,6 +442,8 @@ export function Dashboard() {
       fetchDashboardData();
     } catch (error: any) {
       toast.error('售出失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -454,7 +477,9 @@ export function Dashboard() {
                   <label className="text-sm font-medium text-gray-700">商品名称</label>
                   <Input required placeholder="如：100元代金券" value={newProductName} onChange={e => setNewProductName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                 </div>
-                <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+                <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                  {isSubmitting ? '保存中...' : '保存'}
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -732,7 +757,9 @@ export function Dashboard() {
               </div>
             </div>
             <div className="text-xs text-gray-400 text-center">注：售出将扣除 0.6% 的手续费计算最终利润</div>
-            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">确认售出</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+              {isSubmitting ? '售出处理中...' : '确认售出'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -743,7 +770,9 @@ export function Dashboard() {
           <DialogHeader><DialogTitle className="text-gray-900">修改商品名称</DialogTitle></DialogHeader>
           <form onSubmit={handleEditProduct} className="space-y-4">
             <Input required value={editProduct?.name || ''} onChange={e => setEditProduct(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
-            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+              {isSubmitting ? '保存中...' : '保存'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -762,8 +791,10 @@ export function Dashboard() {
             <div className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>
-            <Button variant="destructive" onClick={handleDeleteProduct} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20">确认删除</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200" disabled={isSubmitting}>取消</Button>
+            <Button variant="destructive" onClick={handleDeleteProduct} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20" disabled={isSubmitting}>
+              {isSubmitting ? '删除中...' : '确认删除'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -785,8 +816,10 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setClearTodayConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200">取消</Button>
-            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearTodaySales}>确认归零</Button>
+            <Button variant="outline" onClick={() => setClearTodayConfirm(false)} className="rounded-2xl h-12 px-6 border-gray-200" disabled={isSubmitting}>取消</Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-12 px-6 shadow-lg shadow-red-500/20 font-bold" onClick={handleClearTodaySales} disabled={isSubmitting}>
+              {isSubmitting ? '归零中...' : '确认归零'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

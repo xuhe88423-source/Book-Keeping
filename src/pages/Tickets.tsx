@@ -115,6 +115,8 @@ export function Tickets() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -167,6 +169,8 @@ export function Tickets() {
 
   async function handleAddPlatform(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('platforms').insert([{ name: newPlatformName }]);
       if (error) throw error;
@@ -176,12 +180,15 @@ export function Tickets() {
       fetchData(false);
     } catch (error: any) {
       toast.error('创建失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleAddTicket(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPlatformId || !selectedProductId) return;
+    if (!selectedPlatformId || !selectedProductId || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const ptTickets = tickets.filter(t => t.platform_id === selectedPlatformId && t.global_product_id === selectedProductId);
       const maxSortOrder = ptTickets.length > 0 ? Math.max(...ptTickets.map(t => t.sort_order || 0)) : 0;
@@ -203,12 +210,15 @@ export function Tickets() {
       fetchData(false);
     } catch (error: any) {
       toast.error('添加失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleEditPlatform(e: React.FormEvent) {
     e.preventDefault();
-    if (!editPlatform) return;
+    if (!editPlatform || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('platforms').update({ name: editPlatform.name }).eq('id', editPlatform.id);
       if (error) throw error;
@@ -217,12 +227,15 @@ export function Tickets() {
       fetchData(false);
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleEditTicket(e: React.FormEvent) {
     e.preventDefault();
-    if (!editTicketCost) return;
+    if (!editTicketCost || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const { error } = await supabase.from('tickets').update({ cost_price: parseFloat(editTicketCost.cost_price) }).eq('id', editTicketCost.id);
       if (error) throw error;
@@ -231,11 +244,14 @@ export function Tickets() {
       fetchData(false);
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    if (!deleteConfirm) return;
+    if (!deleteConfirm || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       let table = '';
       if (deleteConfirm.type === 'platform') table = 'platforms';
@@ -248,6 +264,8 @@ export function Tickets() {
       fetchData(false);
     } catch (error: any) {
       toast.error('删除失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -330,13 +348,15 @@ export function Tickets() {
             <DialogHeader>
               <DialogTitle className="text-gray-900">新增平台</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddPlatform} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">平台名称</label>
-                <Input required placeholder="如：淘宝、美团" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
-              </div>
-              <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
-            </form>
+            <form onSubmit={handleAddPlatform} className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">平台名称</label>
+                  <Input required placeholder="如：美团、携程" value={newPlatformName} onChange={e => setNewPlatformName(e.target.value)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
+                </div>
+                <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                  {isSubmitting ? '保存中...' : '保存'}
+                </Button>
+              </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -421,9 +441,11 @@ export function Tickets() {
                                       <label className="text-sm font-medium text-gray-700">成本价 (元)</label>
                                       <Input required type="number" step="0.01" min="0" value={newTicket.cost_price} onChange={e => setNewTicket({...newTicket, cost_price: e.target.value})} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20 focus-visible:border-primary" />
                                     </div>
-                                    <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
-                                  </form>
-                                </DialogContent>
+                <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                  {isSubmitting ? '保存中...' : '保存'}
+                </Button>
+              </form>
+            </DialogContent>
                               </Dialog>
                             </div>
                           </div>
@@ -471,7 +493,9 @@ export function Tickets() {
           <DialogHeader><DialogTitle className="text-gray-900">修改平台名称</DialogTitle></DialogHeader>
           <form onSubmit={handleEditPlatform} className="space-y-4">
             <Input required value={editPlatform?.name || ''} onChange={e => setEditPlatform(prev => prev ? {...prev, name: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
-            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+              {isSubmitting ? '保存中...' : '保存'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -482,7 +506,9 @@ export function Tickets() {
           <DialogHeader><DialogTitle className="text-gray-900">修改成本价</DialogTitle></DialogHeader>
           <form onSubmit={handleEditTicket} className="space-y-4">
             <Input required type="number" step="0.01" min="0" value={editTicketCost?.cost_price || ''} onChange={e => setEditTicketCost(prev => prev ? {...prev, cost_price: e.target.value} : null)} className="rounded-xl h-12 bg-gray-50 border-transparent focus-visible:ring-primary/20" />
-            <Button type="submit" className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">保存</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+              {isSubmitting ? '保存中...' : '保存'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -502,8 +528,10 @@ export function Tickets() {
             <div className="mt-3 text-sm font-bold text-gray-900">此操作不可恢复，是否继续？</div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200">取消</Button>
-            <Button variant="destructive" onClick={handleDelete} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20">确认删除</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="rounded-xl h-12 px-6 border-gray-200" disabled={isSubmitting}>取消</Button>
+            <Button variant="destructive" onClick={handleDelete} className="rounded-xl h-12 px-6 font-bold shadow-lg shadow-destructive/20" disabled={isSubmitting}>
+              {isSubmitting ? '删除中...' : '确认删除'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
