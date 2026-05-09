@@ -62,7 +62,7 @@ function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
       <div className="flex flex-col shrink-0 min-w-[70px]">
         <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
         <div className="flex items-center gap-0.5">
-          <span className="text-gray-900 font-bold text-base tracking-tight leading-none">¥{ticket.cost_price.toFixed(2)}</span>
+          <span className="text-gray-900 font-bold text-base tracking-tight leading-none">{ticket.cost_price.toFixed(2)}</span>
           <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => onEdit(ticket)}>
             <Pencil className="w-2.5 h-2.5" />
           </Button>

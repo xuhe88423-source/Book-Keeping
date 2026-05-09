@@ -271,7 +271,7 @@ export function Sales() {
                       <div className="text-right flex items-center gap-4">
                         <div>
                           <div className="text-xs text-gray-400 font-medium mb-1">总价 / 数量</div>
-                          <div className="font-bold text-lg text-gray-900">¥{group.total_sell_price.toFixed(2)} <span className="text-sm text-gray-500 font-medium ml-1">/ {group.total_quantity}张</span></div>
+                          <div className="font-bold text-lg text-gray-900">{group.total_sell_price.toFixed(2)} <span className="text-sm text-gray-500 font-medium ml-1">/ {group.total_quantity}张</span></div>
                         </div>
                         <div className="bg-gray-50 p-2 rounded-full">
                           {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
@@ -291,8 +291,8 @@ export function Sales() {
                                 {item.tickets?.platforms?.name || '未知平台'}
                               </span>
                               <div className="flex flex-col">
-                                <span className="text-xs text-gray-500 mb-0.5">成本: ¥{item.tickets?.cost_price?.toFixed(2)}</span>
-                                <span className="text-sm font-bold text-gray-900">售出: ¥{item.sell_price?.toFixed(2)}</span>
+                                <span className="text-xs text-gray-500 mb-0.5">成本: {item.tickets?.cost_price?.toFixed(2)}</span>
+                                <span className="text-sm font-bold text-gray-900">售出: {item.sell_price?.toFixed(2)}</span>
                               </div>
                             </div>
                             <div>
@@ -312,11 +312,11 @@ export function Sales() {
                         <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                           <div>
                             <div className="text-gray-400 mb-1 text-[11px] font-bold uppercase tracking-wider">总成本</div>
-                            <div className="font-semibold text-gray-600 text-base">¥{group.total_cost_price.toFixed(2)}</div>
+                            <div className="font-semibold text-gray-600 text-base">{group.total_cost_price.toFixed(2)}</div>
                           </div>
                           <div>
                             <div className="text-gray-400 mb-1 text-[11px] font-bold uppercase tracking-wider">扣除手续费 (0.6%)</div>
-                            <div className="font-semibold text-orange-500 text-base">¥{group.total_fee.toFixed(2)}</div>
+                            <div className="font-semibold text-orange-500 text-base">{group.total_fee.toFixed(2)}</div>
                           </div>
                           <div className="col-span-2 pt-4 border-t border-gray-50 flex justify-between items-end">
                             <div>

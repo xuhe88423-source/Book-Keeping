@@ -607,7 +607,7 @@ export function Dashboard() {
                 )}
               </div>
               <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.todayProfit.toFixed(2)}</h3>
+                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">{data.todayProfit.toFixed(2)}</h3>
                   <span className="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 whitespace-nowrap mt-0.5">
                     售出 {data.todaySoldQuantity}
                   </span>
@@ -626,7 +626,7 @@ export function Dashboard() {
                   <div className="text-xs sm:text-sm font-medium text-gray-500 truncate">本月利润</div>
                 </div>
                 <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.monthProfit.toFixed(2)}</h3>
+                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">{data.monthProfit.toFixed(2)}</h3>
                   <span className="text-[10px] sm:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50 whitespace-nowrap mt-0.5">
                     售出 {data.monthSoldQuantity}
                   </span>
@@ -647,9 +647,9 @@ export function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} dy={10} fontWeight={500} />
-                  <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `¥${value}`} dx={-10} fontWeight={500} />
+                  <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} dx={-10} fontWeight={500} />
                   <Tooltip 
-                    formatter={(value: any) => [`¥${Number(value).toFixed(2)}`, '利润']}
+                    formatter={(value: any) => [`${Number(value).toFixed(2)}`, '利润']}
                     cursor={{fill: 'rgba(0,0,0,0.02)', radius: 8}}
                     contentStyle={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}
                     itemStyle={{ color: '#111827', fontWeight: 600 }}
@@ -745,10 +745,9 @@ export function Dashboard() {
                           )}
 
                           {/* 价格显示 */}
-                          <div className={`flex items-baseline gap-0.5 ${ticket.status === 'sold_pending' ? 'mb-1' : 'mt-2'}`}>
-                            <span className="text-[10px] text-gray-500 font-medium">¥</span>
+                          <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-1' : 'mt-2'}`}>
                             <span className={`font-extrabold tracking-tight ${
-                              ticket.status === 'sold_pending' ? 'text-gray-500 text-sm' : 'text-gray-900 text-base'
+                              ticket.status === 'sold_pending' ? 'text-gray-500 text-xs' : 'text-gray-900 text-xs'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
