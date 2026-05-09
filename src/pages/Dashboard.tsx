@@ -78,7 +78,7 @@ export function Dashboard() {
       toast.success('商品创建成功');
       setIsAddProductOpen(false);
       setNewProductName('');
-      fetchDashboardData();
+      fetchDashboardData(false);
     } catch (error: any) {
       toast.error('创建失败: ' + error.message);
     } finally {
@@ -99,7 +99,7 @@ export function Dashboard() {
         setSelectedProduct({ ...selectedProduct, name: editProduct.name });
       }
       setEditProduct(null);
-      fetchDashboardData();
+      fetchDashboardData(false);
     } catch (error: any) {
       toast.error('修改失败: ' + error.message);
     } finally {
@@ -116,7 +116,7 @@ export function Dashboard() {
       toast.success('删除成功');
       setDeleteConfirm(null);
       setIsDetailOpen(false);
-      fetchDashboardData();
+      fetchDashboardData(false);
     } catch (error: any) {
       toast.error('删除失败: ' + error.message);
     } finally {
@@ -149,7 +149,7 @@ export function Dashboard() {
           };
         });
       }
-      fetchDashboardData();
+      fetchDashboardData(false);
     } catch (error: any) {
       toast.error('核销失败: ' + error.message);
     } finally {
@@ -191,9 +191,9 @@ export function Dashboard() {
     }
   }
 
-  async function fetchDashboardData() {
+  async function fetchDashboardData(showLoading = true) {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       
       const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -341,6 +341,12 @@ export function Dashboard() {
         globalProducts: globalProducts
       });
 
+      setSelectedProduct(prev => {
+        if (!prev) return prev;
+        const updated = globalProducts.find(gp => gp.id === prev.id);
+        return updated || prev;
+      });
+
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
       if (error?.message === 'Failed to fetch' || error?.code === 'PGRST301' || !navigator.onLine) {
@@ -436,8 +442,23 @@ export function Dashboard() {
       if (ticketError) throw ticketError;
 
       toast.success('组合售出成功');
+      
+      // Optmistic UI update
+      setSelectedProduct(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          platformDetails: prev.platformDetails.map(p => ({
+            ...p,
+            tickets: p.tickets.map(t => 
+              ticketUpdates.includes(t.id) ? { ...t, status: 'sold_pending' } : t
+            )
+          }))
+        };
+      });
+
       setBatchSellData({ total_price: '', selectedTickets: {}, sold_at: new Date().toISOString().split('T')[0] });
-      fetchDashboardData();
+      fetchDashboardData(false);
     } catch (error: any) {
       toast.error('售出失败: ' + error.message);
     } finally {
