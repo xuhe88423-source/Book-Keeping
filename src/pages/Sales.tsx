@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useError } from '@/contexts/ErrorContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface SaleWithDetails {
 }
 
 export function Sales() {
+  const { showDbError } = useError();
   const [sales, setSales] = useState<SaleWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('');
@@ -73,7 +75,11 @@ export function Sales() {
       if (error) throw error;
       setSales(data as any);
     } catch (error: any) {
-      toast.error('获取销售记录失败: ' + error.message);
+      if (error?.message === 'Failed to fetch' || error?.code === 'PGRST301' || !navigator.onLine) {
+        showDbError();
+      } else {
+        toast.error('获取销售记录失败: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

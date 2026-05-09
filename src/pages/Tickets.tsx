@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useError } from '@/contexts/ErrorContext';
 import {
   Accordion,
   AccordionContent,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/accordion";
 
 export function Tickets() {
+  const { showDbError } = useError();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [globalProducts, setGlobalProducts] = useState<GlobalProduct[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -87,7 +89,11 @@ export function Tickets() {
       setExpandedPlatforms(prev => prev === null ? (platformsRes.data || []).map(p => p.id) : prev);
       setExpandedProducts(prev => prev === null ? (productsRes.data || []).map(pt => pt.id) : prev);
     } catch (error: any) {
-      toast.error('获取库存数据失败: ' + error.message);
+      if (error?.message === 'Failed to fetch' || error?.code === 'PGRST301' || !navigator.onLine) {
+        showDbError();
+      } else {
+        toast.error('获取库存数据失败: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

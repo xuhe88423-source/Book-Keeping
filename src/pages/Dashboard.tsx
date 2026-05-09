@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useError } from '@/contexts/ErrorContext';
 import type { Ticket } from '@/types';
 
 export interface GlobalProduct {
@@ -32,6 +33,7 @@ interface DashboardData {
 }
 
 export function Dashboard() {
+  const { showDbError } = useError();
   const [data, setData] = useState<DashboardData>({
     todayProfit: 0,
     monthProfit: 0,
@@ -200,8 +202,13 @@ export function Dashboard() {
         globalProducts: globalProducts
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
+      if (error?.message === 'Failed to fetch' || error?.code === 'PGRST301' || !navigator.onLine) {
+        showDbError();
+      } else {
+        toast.error('加载数据失败: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
