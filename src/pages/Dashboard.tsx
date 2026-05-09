@@ -68,6 +68,16 @@ export function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  // 阻止背景滑动
+  useEffect(() => {
+    if (isDetailOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isDetailOpen]);
+
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
     if (isSubmitting) return;
@@ -675,7 +685,7 @@ export function Dashboard() {
             </div>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30 overscroll-none" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="space-y-4">
               <label className="text-sm font-semibold text-gray-700">各平台单据分布 (可直接勾选售卖)</label>
               {selectedProduct?.platformDetails.map((p, pIndex) => {
