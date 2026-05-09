@@ -449,43 +449,39 @@ export function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5">
         <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
-           <CardContent className="p-6 flex flex-col justify-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-sm border border-white/50 shrink-0">
-                  <TrendingUp className="w-6 h-6 text-emerald-500 stroke-[2.5px]" />
-                </div>
-                <div className="text-sm font-semibold text-gray-500">今日利润</div>
+          <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-sm border border-white/50 shrink-0">
+              <TrendingUp className="w-5 h-5 text-emerald-500 stroke-[2.5px]" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">今日利润</div>
+              <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.todayProfit.toFixed(2)}</h3>
+                <span className="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 whitespace-nowrap mt-0.5">
+                  售出 {data.todaySoldQuantity}
+                </span>
               </div>
-              <div className="mt-2">
-                 <h3 className="text-4xl font-extrabold text-gray-900 tracking-tight">¥{data.todayProfit.toFixed(2)}</h3>
-              </div>
-              <div className="flex items-center mt-2">
-                 <div className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-sm font-medium border border-emerald-100/50">
-                   今天售出 {data.todaySoldQuantity} 个商品
-                 </div>
-              </div>
-           </CardContent>
+            </div>
+          </CardContent>
         </Card>
 
         <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
-           <CardContent className="p-6 flex flex-col justify-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100/50 shadow-sm border border-white/50 shrink-0">
-                  <Wallet className="w-6 h-6 text-blue-500 stroke-[2.5px]" />
-                </div>
-                <div className="text-sm font-semibold text-gray-500">本月利润</div>
+          <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100/50 shadow-sm border border-white/50 shrink-0">
+              <Wallet className="w-5 h-5 text-blue-500 stroke-[2.5px]" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">本月利润</div>
+              <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.monthProfit.toFixed(2)}</h3>
+                <span className="text-[10px] sm:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50 whitespace-nowrap mt-0.5">
+                  售出 {data.monthSoldQuantity}
+                </span>
               </div>
-              <div className="mt-2">
-                 <h3 className="text-4xl font-extrabold text-gray-900 tracking-tight">¥{data.monthProfit.toFixed(2)}</h3>
-              </div>
-              <div className="flex items-center mt-2">
-                 <div className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-sm font-medium border border-blue-100/50">
-                   本月售出 {data.monthSoldQuantity} 个商品
-                 </div>
-              </div>
-           </CardContent>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
