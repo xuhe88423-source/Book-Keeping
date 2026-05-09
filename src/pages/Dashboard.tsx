@@ -449,40 +449,44 @@ export function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-5">
-        <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
-          <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-sm border border-white/50 shrink-0">
-              <TrendingUp className="w-5 h-5 text-emerald-500 stroke-[2.5px]" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">今日利润</div>
-              <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-                <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.todayProfit.toFixed(2)}</h3>
-                <span className="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 whitespace-nowrap mt-0.5">
-                  售出 {data.todaySoldQuantity}
-                </span>
+      {/* 销售利润统计 */}
+      <div className="pt-4 border-t border-gray-200/60">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">销售与利润</h3>
+        <div className="grid grid-cols-2 gap-3 sm:gap-5">
+          <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-sm border border-white/50 shrink-0">
+                <TrendingUp className="w-5 h-5 text-emerald-500 stroke-[2.5px]" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">今日利润</div>
+                <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.todayProfit.toFixed(2)}</h3>
+                  <span className="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 whitespace-nowrap mt-0.5">
+                    售出 {data.todaySoldQuantity}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
-          <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100/50 shadow-sm border border-white/50 shrink-0">
-              <Wallet className="w-5 h-5 text-blue-500 stroke-[2.5px]" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">本月利润</div>
-              <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-                <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.monthProfit.toFixed(2)}</h3>
-                <span className="text-[10px] sm:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50 whitespace-nowrap mt-0.5">
-                  售出 {data.monthSoldQuantity}
-                </span>
+          <Card className="border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-hidden">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-start gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100/50 shadow-sm border border-white/50 shrink-0">
+                <Wallet className="w-5 h-5 text-blue-500 stroke-[2.5px]" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium text-gray-500 mb-0.5 truncate">本月利润</div>
+                <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">¥{data.monthProfit.toFixed(2)}</h3>
+                  <span className="text-[10px] sm:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50 whitespace-nowrap mt-0.5">
+                    售出 {data.monthSoldQuantity}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5">
