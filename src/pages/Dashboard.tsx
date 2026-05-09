@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, TrendingUp, Plus, Trash2, AlertCircle, CheckCircle2, Pencil } from 'lucide-react';
+import { Wallet, TrendingUp, Plus, Trash2, AlertCircle, CheckCircle2, Pencil, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, format, subDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -648,6 +648,16 @@ export function Dashboard() {
                   });
                 if (availableTickets.length === 0) return null;
                 
+                // 计算全局最低价
+                let lowestPrice = Infinity;
+                selectedProduct?.platformDetails.forEach(platform => {
+                  platform.tickets.forEach(t => {
+                    if (t.status === 'for_sale' && t.cost_price < lowestPrice) {
+                      lowestPrice = t.cost_price;
+                    }
+                  });
+                });
+
                 const theme = getPlatformTheme(pIndex);
                 
                 return (
@@ -659,12 +669,22 @@ export function Dashboard() {
                       </div>
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                       {availableTickets.map(ticket => (
-                        <label key={ticket.id} className={`flex items-center justify-between rounded-lg p-2 cursor-pointer border ${ticket.status !== 'for_sale' ? 'bg-gray-50/80 border-gray-100' : 'bg-white hover:border-primary/30 shadow-sm'} transition-all`}>
-                          <div className="flex items-center gap-3">
+                        <label key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-2 sm:p-3 cursor-pointer border-2 transition-all ${
+                          ticket.status !== 'for_sale' 
+                            ? 'bg-orange-50/50 border-orange-100 opacity-90' // sold_pending
+                            : ticket.cost_price === lowestPrice
+                              ? 'bg-red-50 border-red-200 hover:border-red-300' // lowest price
+                              : 'bg-white border-gray-100 hover:border-primary/30 shadow-sm' // normal
+                        } ${
+                          !!batchSellData.selectedTickets[ticket.id] ? '!border-primary bg-primary/5 shadow-md' : ''
+                        }`}>
+                          
+                          {ticket.status === 'for_sale' && (
                             <input 
                               type="checkbox" 
+                              className="sr-only peer"
                               disabled={ticket.status !== 'for_sale'}
                               checked={!!batchSellData.selectedTickets[ticket.id]}
                               onChange={e => {
@@ -673,37 +693,51 @@ export function Dashboard() {
                                   selectedTickets: { ...prev.selectedTickets, [ticket.id]: e.target.checked }
                                 }))
                               }}
-                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
                             />
-                            <div className="flex flex-col">
-                              <span className="text-[10px] text-gray-500">成本价</span>
-                              <span className="font-bold text-gray-900">¥{ticket.cost_price.toFixed(2)}</span>
+                          )}
+
+                          {/* 最低价高亮角标 */}
+                          {ticket.status === 'for_sale' && ticket.cost_price === lowestPrice && (
+                            <div className="absolute -top-2.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+                              最低
                             </div>
+                          )}
+
+                          {/* 选中状态打勾 */}
+                          {!!batchSellData.selectedTickets[ticket.id] && (
+                            <div className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-0.5 shadow-sm z-10">
+                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            </div>
+                          )}
+
+                          {/* 价格显示 */}
+                          <div className="flex items-baseline gap-0.5">
+                            <span className="text-[10px] text-gray-500 font-medium">¥</span>
+                            <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${
+                              ticket.status !== 'for_sale' ? 'text-orange-700/70' :
+                              ticket.cost_price === lowestPrice ? 'text-red-600' : 'text-gray-900'
+                            }`}>
+                              {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
+                            </span>
                           </div>
-                          
-                          <div className="flex items-center gap-2">
-                            {ticket.status === 'for_sale' ? (
-                              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold border border-emerald-100">待售</span>
-                            ) : ticket.status === 'sold_pending' ? (
-                              <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded-full font-bold border border-orange-100">已售待使用</span>
-                            ) : null}
-                            
-                            {ticket.status === 'sold_pending' && (
+
+                          {/* 核销按钮 */}
+                          {ticket.status === 'sold_pending' && (
+                            <div className="mt-2 w-full">
                               <Button 
                                 size="sm" 
-                                variant="outline" 
-                                className="h-7 rounded-full text-[10px] font-bold px-3 text-emerald-600 border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm gap-1 ml-1" 
+                                className="w-full h-6 rounded-md text-[10px] font-bold px-0 text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300 shadow-none gap-0.5" 
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   handleWriteOff(ticket.id);
                                 }}
                               >
-                                <CheckCircle2 className="w-3 h-3" />
+                                <CheckCircle2 className="w-2.5 h-2.5" />
                                 核销
                               </Button>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </label>
                       ))}
                     </div>

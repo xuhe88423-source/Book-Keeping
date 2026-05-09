@@ -191,7 +191,7 @@ export function Tickets() {
     setIsSubmitting(true);
     try {
       const ptTickets = tickets.filter(t => t.platform_id === selectedPlatformId && t.global_product_id === selectedProductId);
-      const maxSortOrder = ptTickets.length > 0 ? Math.max(...ptTickets.map(t => t.sort_order || 0)) : 0;
+      const minSortOrder = ptTickets.length > 0 ? Math.min(...ptTickets.map(t => t.sort_order || 0)) : 0;
 
       const { error } = await supabase.from('tickets').insert([
         {
@@ -200,7 +200,7 @@ export function Tickets() {
           cost_price: parseFloat(newTicket.cost_price),
           quantity: 1,
           status: 'for_sale',
-          sort_order: maxSortOrder + 1,
+          sort_order: minSortOrder - 1,
         }
       ]);
       if (error) throw error;
