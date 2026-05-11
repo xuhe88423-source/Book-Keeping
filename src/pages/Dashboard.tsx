@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useError } from '@/contexts/ErrorContext';
 import type { Ticket } from '@/types';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 export interface GlobalProduct {
   id: string;
@@ -68,7 +69,8 @@ export function Dashboard() {
     fetchDashboardData();
   }, []);
 
-
+  const isAnyDialogOpen = isDetailOpen || isAddProductOpen || !!editProduct || !!deleteConfirm || clearTodayConfirm;
+  useScrollLock(isAnyDialogOpen);
 
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();

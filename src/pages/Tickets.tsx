@@ -36,6 +36,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 function SortableTicketItem({ ticket, index, onClick }: any) {
   const {
@@ -150,6 +151,9 @@ export function Tickets() {
   useEffect(() => {
     fetchData(true);
   }, []);
+
+  const isAnyDialogOpen = isAddPlatformOpen || isAddTicketOpen || !!editPlatform || !!editTicketCost || !!selectedTicketAction || !!deleteConfirm;
+  useScrollLock(isAnyDialogOpen);
 
   async function fetchData(showLoading = true) {
     try {
