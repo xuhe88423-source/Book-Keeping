@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Platform, Ticket, GlobalProduct } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Plus, Tag, Store, Pencil, Trash2, AlertCircle, GripVertical } from 'lucide-react';
+import { Plus, Tag, Store, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
