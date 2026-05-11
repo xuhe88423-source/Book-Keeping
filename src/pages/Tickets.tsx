@@ -23,7 +23,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -50,6 +51,7 @@ function SortableTicketItem({ ticket, index, onClick }: any) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: 'pan-y' as const,
   };
 
   let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
@@ -132,9 +134,15 @@ export function Tickets() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
