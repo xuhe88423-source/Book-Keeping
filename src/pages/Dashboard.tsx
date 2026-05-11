@@ -666,7 +666,7 @@ export function Dashboard() {
 
       {/* 商品详情与组合售出合并弹窗 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[90vh] h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-h-[85dvh] h-[85dvh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="shrink-0 p-6 pb-4 border-b border-gray-100">
             <DialogTitle className="text-gray-900 text-xl font-bold flex justify-between items-center pr-6">
               <span>{selectedProduct?.name}</span>
