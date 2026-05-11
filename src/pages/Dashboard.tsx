@@ -68,15 +68,7 @@ export function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  // 阻止背景滑动
-  useEffect(() => {
-    if (isDetailOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isDetailOpen]);
+
 
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
