@@ -528,18 +528,11 @@ export function Tickets() {
 
       {/* Ticket Action Dialog */}
       <Dialog open={!!selectedTicketAction} onOpenChange={(open) => !open && setSelectedTicketAction(null)}>
-        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900 text-center">单据操作</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 mt-2">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-2">
-              <span className="text-sm font-medium text-gray-500">当前成本价</span>
-              <span className="font-bold text-gray-900 text-lg">¥{selectedTicketAction?.cost_price}</span>
-            </div>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-w-[280px] p-5">
+          <div className="flex flex-col gap-3">
             <Button 
               variant="outline" 
-              className="w-full h-12 rounded-xl font-bold border-gray-200"
+              className="w-full h-12 rounded-xl font-bold border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
               onClick={() => {
                 if (selectedTicketAction) {
                   setEditTicketCost({id: selectedTicketAction.id, cost_price: selectedTicketAction.cost_price.toString()});
@@ -547,12 +540,12 @@ export function Tickets() {
                 }
               }}
             >
-              <Pencil className="w-4 h-4 mr-2" />
+              <Pencil className="w-4 h-4 mr-2 text-gray-500" />
               修改成本价
             </Button>
             <Button 
               variant="destructive" 
-              className="w-full h-12 rounded-xl font-bold shadow-lg shadow-destructive/20"
+              className="w-full h-12 rounded-xl font-bold shadow-sm"
               onClick={() => {
                 if (selectedTicketAction) {
                   setDeleteConfirm({type: 'ticket', id: selectedTicketAction.id});
