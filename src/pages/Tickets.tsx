@@ -32,12 +32,12 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
+function SortableTicketItem({ ticket, index, onClick }: any) {
   const {
     attributes,
     listeners,
@@ -51,41 +51,51 @@ function SortableTicketItem({ ticket, onEdit, onDelete }: any) {
     transition,
   };
 
+  let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
+  if (ticket.status === 'sold_pending') {
+    baseClass = 'bg-gray-50/80 border-gray-200 opacity-90';
+  }
+
   return (
-    <div ref={setNodeRef} style={style} className="shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100/80 rounded-xl bg-white overflow-hidden p-2.5 sm:p-3 flex items-center justify-between gap-3">
-      {/* Drag handle */}
-      <div {...attributes} {...listeners} className="cursor-grab hover:text-primary text-gray-400 active:cursor-grabbing px-1">
-        <GripVertical className="w-5 h-5" />
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      {...listeners} 
+      className={`relative flex flex-col items-center justify-center rounded-xl p-1 cursor-pointer border-2 transition-all ${baseClass} h-[52px]`}
+      onClick={() => onClick(ticket)}
+    >
+      {/* 序号 */}
+      <div className="absolute top-0.5 left-1.5 text-[10px] font-bold text-gray-400 scale-90 origin-top-left">
+        {index + 1}
       </div>
-      
-      {/* Left: Price */}
-      <div className="flex flex-col shrink-0 min-w-[70px]">
-        <span className="text-[10px] font-medium text-gray-400 leading-none mb-1">成本价</span>
-        <div className="flex items-center gap-0.5">
-          <span className="text-gray-900 font-bold text-base tracking-tight leading-none">{ticket.cost_price.toFixed(2)}</span>
-          <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md text-gray-400 hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => onEdit(ticket)}>
-            <Pencil className="w-2.5 h-2.5" />
-          </Button>
+
+      {/* 状态角标 (待售 / 预约) */}
+      {ticket.status === 'active' && (
+        <div className="absolute -top-2.5 -right-1.5 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+          待售
         </div>
+      )}
+      {ticket.status === 'reserved' && (
+        <div className="absolute -top-2.5 -right-1.5 bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+          预约
+        </div>
+      )}
+
+      {/* 价格显示 */}
+      <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-0.5' : ''}`}>
+        <span className={`font-extrabold tracking-tight ${
+          ticket.status === 'sold_pending' ? 'text-gray-500 text-[11px]' : 'text-gray-900 text-[13px]'
+        }`}>
+          {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
+        </span>
       </div>
-      
-      {/* Middle: Status Badge */}
-      <div className="flex-1 flex justify-center">
-        {ticket.status === 'active' ? (
-          <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">待售</span>
-        ) : ticket.status === 'reserved' ? (
-          <span className="bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">预约</span>
-        ) : ticket.status === 'sold_pending' ? (
-          <span className="bg-gray-100 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide">已售待使用</span>
-        ) : null}
-      </div>
-        
-      {/* Right: Actions */}
-      <div className="flex items-center gap-1 sm:gap-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-gray-400 hover:text-destructive hover:bg-destructive/10 shrink-0" onClick={() => onDelete(ticket)}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+
+      {ticket.status === 'sold_pending' && (
+        <div className="absolute bottom-1 right-1 text-[9px] text-gray-400 font-bold scale-90 origin-bottom-right">
+          待使用
+        </div>
+      )}
     </div>
   );
 }
@@ -110,6 +120,7 @@ export function Tickets() {
   const [editPlatform, setEditPlatform] = useState<{id: string, name: string} | null>(null);
   const [editTicketCost, setEditTicketCost] = useState<{id: string, cost_price: string} | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{type: 'platform' | 'ticket', id: string, name?: string} | null>(null);
+  const [selectedTicketAction, setSelectedTicketAction] = useState<Ticket | null>(null);
 
   // Accordion state
   const [expandedPlatforms, setExpandedPlatforms] = useState<string[] | null>(() => {
@@ -462,15 +473,15 @@ export function Tickets() {
                             >
                               <SortableContext 
                                 items={ptTickets.map(t => t.id)}
-                                strategy={verticalListSortingStrategy}
+                                strategy={rectSortingStrategy}
                               >
-                                <div className="flex flex-col gap-2">
-                                  {ptTickets.map(ticket => (
+                                <div className="grid grid-cols-4 gap-2">
+                                  {ptTickets.map((ticket, tIndex) => (
                                     <SortableTicketItem 
                                       key={ticket.id} 
                                       ticket={ticket} 
-                                      onEdit={(t: Ticket) => setEditTicketCost({id: t.id, cost_price: t.cost_price.toString()})}
-                                      onDelete={(t: Ticket) => setDeleteConfirm({type: 'ticket', id: t.id})}
+                                      index={tIndex}
+                                      onClick={(t: Ticket) => setSelectedTicketAction(t)}
                                     />
                                   ))}
                                 </div>
@@ -512,6 +523,47 @@ export function Tickets() {
               {isSubmitting ? '保存中...' : '保存'}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ticket Action Dialog */}
+      <Dialog open={!!selectedTicketAction} onOpenChange={(open) => !open && setSelectedTicketAction(null)}>
+        <DialogContent className="rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-gray-100 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 text-center">单据操作</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-2">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-2">
+              <span className="text-sm font-medium text-gray-500">当前成本价</span>
+              <span className="font-bold text-gray-900 text-lg">¥{selectedTicketAction?.cost_price}</span>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full h-12 rounded-xl font-bold border-gray-200"
+              onClick={() => {
+                if (selectedTicketAction) {
+                  setEditTicketCost({id: selectedTicketAction.id, cost_price: selectedTicketAction.cost_price.toString()});
+                  setSelectedTicketAction(null);
+                }
+              }}
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              修改成本价
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="w-full h-12 rounded-xl font-bold shadow-lg shadow-destructive/20"
+              onClick={() => {
+                if (selectedTicketAction) {
+                  setDeleteConfirm({type: 'ticket', id: selectedTicketAction.id});
+                  setSelectedTicketAction(null);
+                }
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              删除单据
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
