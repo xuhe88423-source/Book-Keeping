@@ -153,7 +153,7 @@ export function Dashboard() {
     }
   }
 
-  async function handleBatchUpdateStatus(newStatus: 'active' | 'reserved') {
+  async function handleBatchUpdateStatus(targetStatus: 'active' | 'reserved') {
     const selectedIds = Object.entries(batchSellData.selectedTickets).filter(([_, selected]) => selected).map(([id]) => id);
     if (selectedIds.length === 0) {
       toast.error('请至少选择一张单据');
@@ -161,10 +161,27 @@ export function Dashboard() {
     }
     if (isSubmitting) return;
     setIsSubmitting(true);
+
     try {
+      // Determine if we are toggling ON or OFF.
+      // If ALL selected tickets are ALREADY in the targetStatus, then we turn them OFF (set to 'for_sale')
+      let allAlreadyInTargetStatus = true;
+      if (selectedProduct) {
+        for (const p of selectedProduct.platformDetails) {
+          for (const t of p.tickets) {
+            if (selectedIds.includes(t.id) && t.status !== targetStatus) {
+              allAlreadyInTargetStatus = false;
+              break;
+            }
+          }
+        }
+      }
+
+      const finalStatus = allAlreadyInTargetStatus ? 'for_sale' : targetStatus;
+
       const { error } = await supabase
         .from('tickets')
-        .update({ status: newStatus })
+        .update({ status: finalStatus })
         .in('id', selectedIds);
 
       if (error) throw error;
@@ -176,14 +193,14 @@ export function Dashboard() {
             ...prev,
             platformDetails: prev.platformDetails.map(p => ({
               ...p,
-              tickets: p.tickets.map(t => selectedIds.includes(t.id) ? { ...t, status: newStatus } : t)
+              tickets: p.tickets.map(t => selectedIds.includes(t.id) ? { ...t, status: finalStatus } : t)
             }))
           };
         });
       }
       
       setBatchSellData(prev => ({ ...prev, selectedTickets: {} }));
-      toast.success('状态更新成功');
+      toast.success(finalStatus === 'for_sale' ? '状态已取消' : '状态更新成功');
       fetchDashboardData(false);
     } catch (error: any) {
       toast.error('状态更新失败: ' + error.message);
