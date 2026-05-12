@@ -535,51 +535,107 @@ export function Dashboard() {
         {data.globalProducts.length === 0 ? (
           <div className="text-sm text-gray-400">暂无商品数据</div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-            {data.globalProducts.map((stat, i) => {
-              const theme = getPlatformTheme(stat.originalIndex);
-              return (
-              <div 
-                key={i} 
-                onClick={() => {
-                  setSelectedProduct(stat);
-                  setIsDetailOpen(true);
-                }}
-                className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${stat.is_hidden ? 'bg-gray-100/80 border-gray-200 grayscale opacity-60' : theme.card}`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${stat.is_hidden ? 'bg-gray-400' : theme.dot}`}></div>
-                    <span className={`text-sm sm:text-base font-semibold truncate max-w-[120px] sm:max-w-[150px] ${stat.is_hidden ? 'text-gray-600' : theme.text}`}>{stat.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div 
-                      role="button" 
-                      className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${stat.is_hidden ? 'text-gray-500' : theme.text} opacity-60 hover:opacity-100`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleHideProduct(stat.id, !!stat.is_hidden);
-                      }}
-                    >
-                      {stat.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          <div className="flex flex-col gap-6">
+            {/* Visible Products */}
+            {data.globalProducts.filter(p => !p.is_hidden).length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                {data.globalProducts.filter(p => !p.is_hidden).map((stat, i) => {
+                  const theme = getPlatformTheme(stat.originalIndex);
+                  return (
+                  <div 
+                    key={stat.id} 
+                    onClick={() => {
+                      setSelectedProduct(stat);
+                      setIsDetailOpen(true);
+                    }}
+                    className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${theme.card}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${theme.dot}`}></div>
+                        <span className={`text-sm sm:text-base font-semibold truncate max-w-[120px] sm:max-w-[150px] ${theme.text}`}>{stat.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div 
+                          role="button" 
+                          className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${theme.text} opacity-60 hover:opacity-100`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleHideProduct(stat.id, false);
+                          }}
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                        </div>
+                        <div 
+                          role="button" 
+                          className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${theme.text} opacity-60 hover:opacity-100`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditProduct({id: stat.id, name: stat.name});
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
                     </div>
-                    <div 
-                      role="button" 
-                      className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${stat.is_hidden ? 'text-gray-500' : theme.text} opacity-60 hover:opacity-100`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditProduct({id: stat.id, name: stat.name});
-                      }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
+                    <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${theme.text}`}>
+                      {stat.totalQuantity} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
                     </div>
                   </div>
-                </div>
-                <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${stat.is_hidden ? 'text-gray-600' : theme.text}`}>
-                  {stat.totalQuantity} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
+                )})}
+              </div>
+            )}
+
+            {/* Hidden Products */}
+            {data.globalProducts.filter(p => p.is_hidden).length > 0 && (
+              <div className="pt-2 border-t border-dashed border-gray-200/80">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 mt-3">
+                  {data.globalProducts.filter(p => p.is_hidden).map((stat, i) => {
+                    return (
+                    <div 
+                      key={stat.id} 
+                      onClick={() => {
+                        setSelectedProduct(stat);
+                        setIsDetailOpen(true);
+                      }}
+                      className="backdrop-blur-xl border shadow-sm transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 bg-gray-50 border-gray-200 opacity-50 hover:opacity-80"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-2.5 h-2.5 rounded-full shadow-sm bg-gray-400"></div>
+                          <span className="text-sm sm:text-base font-semibold truncate max-w-[120px] sm:max-w-[150px] text-gray-500 line-through decoration-gray-400">{stat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div 
+                            role="button" 
+                            className="p-1.5 rounded-full hover:bg-black/5 transition-colors text-gray-500 opacity-60 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleHideProduct(stat.id, true);
+                            }}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </div>
+                          <div 
+                            role="button" 
+                            className="p-1.5 rounded-full hover:bg-black/5 transition-colors text-gray-500 opacity-60 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditProduct({id: stat.id, name: stat.name});
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-500">
+                        {stat.totalQuantity} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
+                      </div>
+                    </div>
+                  )})}
                 </div>
               </div>
-            )})}
+            )}
           </div>
         )}
       </div>
