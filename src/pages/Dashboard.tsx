@@ -766,7 +766,7 @@ export function Dashboard() {
                       </div>
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-5 gap-x-2 gap-y-1.5">
                       {availableTickets.map((ticket) => {
                         const isSellable = ['for_sale', 'active', 'reserved'].includes(ticket.status);
                         let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
@@ -779,7 +779,7 @@ export function Dashboard() {
                         }
 
                         return (
-                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-0.5 cursor-pointer border-2 transition-all ${baseClass} h-[28px]`} onClick={() => {
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-lg p-0 cursor-pointer border-2 transition-all ${baseClass} h-[26px]`} onClick={() => {
                           if (isSellable) {
                             setBatchSellData(prev => ({
                               ...prev,
@@ -792,12 +792,12 @@ export function Dashboard() {
                         }}>
                           {/* 状态角标 (待售 / 预约) */}
                           {ticket.status === 'active' && (
-                            <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
+                            <div className="absolute -top-2.5 -right-2 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
                               待售
                             </div>
                           )}
                           {ticket.status === 'reserved' && (
-                            <div className="absolute -top-1.5 -right-1.5 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
+                            <div className="absolute -top-2.5 -right-2 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
                               预约
                             </div>
                           )}
