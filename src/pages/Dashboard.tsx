@@ -767,7 +767,7 @@ export function Dashboard() {
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
                     <div className="grid grid-cols-5 gap-2">
-                      {availableTickets.map((ticket, tIndex) => {
+                      {availableTickets.map((ticket) => {
                         const isSellable = ['for_sale', 'active', 'reserved'].includes(ticket.status);
                         let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
                         if (ticket.status === 'sold_pending') {
@@ -790,19 +790,14 @@ export function Dashboard() {
                             }));
                           }
                         }}>
-                          {/* 序号 */}
-                          <div className="absolute top-0.5 left-1 text-[8px] font-bold text-gray-400 scale-90 origin-top-left">
-                            {tIndex + 1}
-                          </div>
-
                           {/* 状态角标 (待售 / 预约) */}
                           {ticket.status === 'active' && (
-                            <div className="absolute -top-1.5 -right-1 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
+                            <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
                               待售
                             </div>
                           )}
                           {ticket.status === 'reserved' && (
-                            <div className="absolute -top-1.5 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
+                            <div className="absolute -top-1.5 -right-1.5 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
                               预约
                             </div>
                           )}

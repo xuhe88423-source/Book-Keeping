@@ -40,7 +40,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { autoWriteOffTickets } from '@/lib/autoWriteOff';
 
-function SortableTicketItem({ ticket, index, onClick }: any) {
+function SortableTicketItem({ ticket, onClick }: any) {
   const {
     attributes,
     listeners,
@@ -69,19 +69,14 @@ function SortableTicketItem({ ticket, index, onClick }: any) {
       className={`relative flex flex-col items-center justify-center rounded-xl p-0.5 cursor-pointer border-2 transition-all ${baseClass} h-[28px]`}
       onClick={() => onClick(ticket)}
     >
-      {/* 序号 */}
-      <div className="absolute top-0.5 left-1 text-[8px] font-bold text-gray-400 scale-90 origin-top-left">
-        {index + 1}
-      </div>
-
       {/* 状态角标 (待售 / 预约) */}
       {ticket.status === 'active' && (
-        <div className="absolute -top-1.5 -right-1 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
+        <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
           待售
         </div>
       )}
       {ticket.status === 'reserved' && (
-        <div className="absolute -top-1.5 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
+        <div className="absolute -top-1.5 -right-1.5 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
           预约
         </div>
       )}
@@ -484,11 +479,10 @@ export function Tickets() {
                                 strategy={rectSortingStrategy}
                               >
                                 <div className="grid grid-cols-5 gap-2">
-                                  {ptTickets.map((ticket, tIndex) => (
+                                  {ptTickets.map((ticket) => (
                                     <SortableTicketItem 
                                       key={ticket.id} 
                                       ticket={ticket} 
-                                      index={tIndex}
                                       onClick={(t: Ticket) => setSelectedTicketAction(t)}
                                     />
                                   ))}
