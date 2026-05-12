@@ -241,6 +241,7 @@ export function Dashboard() {
         .select(`
           id,
           name,
+          is_hidden,
           tickets (
             id,
             cost_price,
@@ -288,6 +289,7 @@ export function Dashboard() {
           globalProducts.push({
             id: gp.id,
             name: gp.name,
+            is_hidden: gp.is_hidden,
             totalQuantity: gpTotalQty,
             originalIndex: index,
             platformDetails: Array.from(platformMap.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
