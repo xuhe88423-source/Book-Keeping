@@ -38,6 +38,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { autoWriteOffTickets } from '@/lib/autoWriteOff';
 
 function SortableTicketItem({ ticket, index, onClick }: any) {
   const {
@@ -65,40 +66,34 @@ function SortableTicketItem({ ticket, index, onClick }: any) {
       style={style} 
       {...attributes} 
       {...listeners} 
-      className={`relative flex flex-col items-center justify-center rounded-xl p-1 cursor-pointer border-2 transition-all ${baseClass} h-[52px]`}
+      className={`relative flex flex-col items-center justify-center rounded-xl p-0.5 cursor-pointer border-2 transition-all ${baseClass} h-[28px]`}
       onClick={() => onClick(ticket)}
     >
       {/* 序号 */}
-      <div className="absolute top-0.5 left-1.5 text-[10px] font-bold text-gray-400 scale-90 origin-top-left">
+      <div className="absolute top-0.5 left-1 text-[8px] font-bold text-gray-400 scale-90 origin-top-left">
         {index + 1}
       </div>
 
       {/* 状态角标 (待售 / 预约) */}
       {ticket.status === 'active' && (
-        <div className="absolute -top-2.5 -right-1.5 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+        <div className="absolute -top-1.5 -right-1 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
           待售
         </div>
       )}
       {ticket.status === 'reserved' && (
-        <div className="absolute -top-2.5 -right-1.5 bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+        <div className="absolute -top-1.5 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
           预约
         </div>
       )}
 
       {/* 价格显示 */}
-      <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-0.5' : ''}`}>
+      <div className="flex items-center justify-center w-full">
         <span className={`font-extrabold tracking-tight ${
-          ticket.status === 'sold_pending' ? 'text-gray-500 text-[11px]' : 'text-gray-900 text-[13px]'
+          ticket.status === 'sold_pending' ? 'text-gray-500 text-[9px]' : 'text-gray-900 text-[11px]'
         }`}>
           {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
         </span>
       </div>
-
-      {ticket.status === 'sold_pending' && (
-        <div className="absolute bottom-1 right-1 text-[9px] text-gray-400 font-bold scale-90 origin-bottom-right">
-          待使用
-        </div>
-      )}
     </div>
   );
 }
@@ -166,6 +161,7 @@ export function Tickets() {
   async function fetchData(showLoading = true) {
     try {
       if (showLoading) setLoading(true);
+      await autoWriteOffTickets();
       const [platformsRes, productsRes, ticketsRes] = await Promise.all([
         supabase.from('platforms').select('*').order('created_at', { ascending: true }),
         supabase.from('global_products').select('*').order('created_at', { ascending: true }),
@@ -422,11 +418,11 @@ export function Tickets() {
               </AccordionTrigger>
               <AccordionContent className="pt-2 pb-6 px-6 space-y-6 border-t border-gray-100/50 mt-2">
 
-                {globalProducts.length === 0 ? (
+                {globalProducts.filter(p => !p.is_hidden).length === 0 ? (
                    <div className="text-center py-5 text-sm text-gray-400 bg-gray-50/50 rounded-2xl">暂无全局商品，请在数据看板中创建</div>
                 ) : (
                   <div className="space-y-4">
-                    {globalProducts.map(pt => {
+                    {globalProducts.filter(p => !p.is_hidden).map(pt => {
                       const ptTickets = getProductTicketsInPlatform(platform.id, pt.id);
                       
                       return (
@@ -487,7 +483,7 @@ export function Tickets() {
                                 items={ptTickets.map(t => t.id)}
                                 strategy={rectSortingStrategy}
                               >
-                                <div className="grid grid-cols-4 gap-2">
+                                <div className="grid grid-cols-5 gap-2">
                                   {ptTickets.map((ticket, tIndex) => (
                                     <SortableTicketItem 
                                       key={ticket.id} 

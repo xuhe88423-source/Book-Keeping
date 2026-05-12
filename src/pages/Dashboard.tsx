@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, TrendingUp, Plus, Trash2, AlertCircle, CheckCircle2, Pencil, Check } from 'lucide-react';
+import { Wallet, TrendingUp, Plus, Trash2, AlertCircle, Pencil, Check, Eye, EyeOff } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, format, subDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,10 +11,12 @@ import { toast } from 'sonner';
 import { useError } from '@/contexts/ErrorContext';
 import type { Ticket } from '@/types';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { autoWriteOffTickets } from '@/lib/autoWriteOff';
 
 export interface GlobalProduct {
   id: string;
   name: string;
+  is_hidden?: boolean;
   totalQuantity: number;
   originalIndex: number;
   platformDetails: {
@@ -128,6 +130,21 @@ export function Dashboard() {
     }
   }
 
+  async function handleToggleHideProduct(productId: string, currentHidden: boolean) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('global_products').update({ is_hidden: !currentHidden }).eq('id', productId);
+      if (error) throw error;
+      toast.success(currentHidden ? '已取消隐藏' : '已隐藏');
+      fetchDashboardData(false);
+    } catch (error: any) {
+      toast.error('操作失败: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleBatchUpdateStatus(newStatus: 'active' | 'reserved') {
     const selectedIds = Object.entries(batchSellData.selectedTickets).filter(([_, selected]) => selected).map(([id]) => id);
     if (selectedIds.length === 0) {
@@ -167,38 +184,7 @@ export function Dashboard() {
     }
   }
 
-  async function handleWriteOff(ticketId: string) {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ status: 'used' })
-        .eq('id', ticketId);
 
-      if (error) throw error;
-      toast.success('核销成功');
-      
-      // Update local state for immediate feedback
-      if (selectedProduct) {
-        setSelectedProduct(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            platformDetails: prev.platformDetails.map(p => ({
-              ...p,
-              tickets: p.tickets.map(t => t.id === ticketId ? { ...t, status: 'used' } : t)
-            }))
-          };
-        });
-      }
-      fetchDashboardData(false);
-    } catch (error: any) {
-      toast.error('核销失败: ' + error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   async function handleClearTodaySales() {
     if (isSubmitting) return;
@@ -237,7 +223,7 @@ export function Dashboard() {
   async function fetchDashboardData(showLoading = true) {
     try {
       if (showLoading) setLoading(true);
-      
+      await autoWriteOffTickets();
       const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
 
@@ -559,25 +545,37 @@ export function Dashboard() {
                   setSelectedProduct(stat);
                   setIsDetailOpen(true);
                 }}
-                className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${theme.card}`}
+                className={`backdrop-blur-xl border shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200 rounded-[1.5rem] p-4 sm:p-5 cursor-pointer flex flex-col items-start gap-2 sm:gap-3 ${stat.is_hidden ? 'bg-gray-100/80 border-gray-200 grayscale opacity-60' : theme.card}`}
               >
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${theme.dot}`}></div>
-                    <span className={`text-sm sm:text-base font-semibold truncate max-w-[120px] sm:max-w-[150px] ${theme.text}`}>{stat.name}</span>
+                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${stat.is_hidden ? 'bg-gray-400' : theme.dot}`}></div>
+                    <span className={`text-sm sm:text-base font-semibold truncate max-w-[120px] sm:max-w-[150px] ${stat.is_hidden ? 'text-gray-600' : theme.text}`}>{stat.name}</span>
                   </div>
-                  <div 
-                    role="button" 
-                    className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${theme.text} opacity-60 hover:opacity-100`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditProduct({id: stat.id, name: stat.name});
-                    }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1">
+                    <div 
+                      role="button" 
+                      className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${stat.is_hidden ? 'text-gray-500' : theme.text} opacity-60 hover:opacity-100`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleHideProduct(stat.id, !!stat.is_hidden);
+                      }}
+                    >
+                      {stat.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    </div>
+                    <div 
+                      role="button" 
+                      className={`p-1.5 rounded-full hover:bg-black/5 transition-colors ${stat.is_hidden ? 'text-gray-500' : theme.text} opacity-60 hover:opacity-100`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditProduct({id: stat.id, name: stat.name});
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </div>
                   </div>
                 </div>
-                <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${theme.text}`}>
+                <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${stat.is_hidden ? 'text-gray-600' : theme.text}`}>
                   {stat.totalQuantity} <span className="text-xs sm:text-sm font-medium opacity-70 ml-0.5">张</span>
                 </div>
               </div>
@@ -702,7 +700,7 @@ export function Dashboard() {
                       </div>
                       <span className="text-xs font-medium opacity-70">共 {availableTickets.length} 张</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-5 gap-2">
                       {availableTickets.map((ticket, tIndex) => {
                         const isSellable = ['for_sale', 'active', 'reserved'].includes(ticket.status);
                         let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
@@ -715,65 +713,49 @@ export function Dashboard() {
                         }
 
                         return (
-                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-1 cursor-pointer border-2 transition-all ${baseClass} h-[52px]`} onClick={() => {
+                        <div key={ticket.id} className={`relative flex flex-col items-center justify-center rounded-xl p-0.5 cursor-pointer border-2 transition-all ${baseClass} h-[28px]`} onClick={() => {
                           if (isSellable) {
                             setBatchSellData(prev => ({
                               ...prev,
-                              selectedTickets: { ...prev.selectedTickets, [ticket.id]: !prev.selectedTickets[ticket.id] }
-                            }))
+                              selectedTickets: {
+                                ...prev.selectedTickets,
+                                [ticket.id]: !prev.selectedTickets[ticket.id]
+                              }
+                            }));
                           }
                         }}>
-                          
                           {/* 序号 */}
-                          <div className="absolute top-0.5 left-1.5 text-[10px] font-bold text-gray-400 scale-90 origin-top-left">
+                          <div className="absolute top-0.5 left-1 text-[8px] font-bold text-gray-400 scale-90 origin-top-left">
                             {tIndex + 1}
                           </div>
 
                           {/* 状态角标 (待售 / 预约) */}
                           {ticket.status === 'active' && (
-                            <div className="absolute -top-2.5 -right-1.5 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+                            <div className="absolute -top-1.5 -right-1 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
                               待售
                             </div>
                           )}
                           {ticket.status === 'reserved' && (
-                            <div className="absolute -top-2.5 -right-1.5 bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm transform rotate-12 z-10">
+                            <div className="absolute -top-1.5 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-90 origin-bottom-left">
                               预约
                             </div>
                           )}
 
                           {/* 选中状态打勾 */}
                           {!!batchSellData.selectedTickets[ticket.id] && (
-                            <div className="absolute bottom-1 left-1 bg-primary text-white rounded-full p-0.5 shadow-sm z-10 scale-90 origin-bottom-left">
+                            <div className="absolute bottom-0.5 left-1 bg-primary text-white rounded-full p-0.5 shadow-sm z-10 scale-75 origin-bottom-left">
                               <Check className="w-3 h-3" strokeWidth={3} />
                             </div>
                           )}
 
                           {/* 价格显示 */}
-                          <div className={`flex items-center justify-center w-full ${ticket.status === 'sold_pending' ? 'mb-0.5' : ''}`}>
+                          <div className="flex items-center justify-center w-full">
                             <span className={`font-extrabold tracking-tight ${
-                              ticket.status === 'sold_pending' ? 'text-gray-500 text-[11px]' : 'text-gray-900 text-[13px]'
+                              ticket.status === 'sold_pending' ? 'text-gray-500 text-[9px]' : 'text-gray-900 text-[11px]'
                             }`}>
                               {Math.floor(ticket.cost_price) === ticket.cost_price ? ticket.cost_price : ticket.cost_price.toFixed(2)}
                             </span>
                           </div>
-
-                          {/* 核销按钮 */}
-                          {ticket.status === 'sold_pending' && (
-                            <div className="w-full px-0.5">
-                              <Button 
-                                size="sm" 
-                                className="w-full h-[18px] rounded-[4px] text-[9px] font-bold px-0 text-gray-600 border border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 shadow-none gap-0.5" 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleWriteOff(ticket.id);
-                                }}
-                              >
-                                <CheckCircle2 className="w-2.5 h-2.5" />
-                                核销
-                              </Button>
-                            </div>
-                          )}
                         </div>
                       )})}
                     </div>

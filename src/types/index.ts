@@ -7,6 +7,7 @@ export interface Platform {
 export interface GlobalProduct {
   id: string;
   name: string;
+  is_hidden?: boolean;
   created_at: string;
 }
 

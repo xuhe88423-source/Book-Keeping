@@ -1,41 +1,72 @@
-# 库存管理单据列表 UX 优化计划
+# 库存与看板交互优化计划
 
-## 1. 目标与范围 (Summary)
-将库存页面（`src/pages/Tickets.tsx`）中商品下方的单据列表，从现有的纵向列表形态，改造成与数据看板（Dashboard）一致的“一行4个”的微型网格卡片（高度52px）布局，提升界面的整洁度与空间利用率。
-同时，适配网格布局下的交互：保持整体拖拽排序功能，将原来的直接平铺的“编辑/删除”按钮改为点击卡片后弹窗操作。
+## 1. 目标与背景
 
-## 2. 现状分析 (Current State Analysis)
-- 目前 `Tickets.tsx` 中的单据列表采用纵向排列的 `SortableTicketItem`。
-- 每个条目占据一行，包含拖拽手柄、价格、状态徽章、编辑按钮和删除按钮。
-- 采用的是 `@dnd-kit/sortable` 的 `verticalListSortingStrategy`（垂直列表排序策略）。
-- 由于 Dashboard 已经实现了美观紧凑的 52px 高度卡片，可以复用该 UI 设计。
+根据用户需求，需要对数据看板中的平台分布单据界面以及库存管理界面进行整体的 UI 尺寸和网格调整，同时引入“商品隐藏”功能以及“次日自动核销”的自动化状态流转机制。
 
-## 3. 具体修改方案 (Proposed Changes)
+## 2. 数据库变更 (需要用户手动执行)
 
-### 3.1 修改 `src/pages/Tickets.tsx` 布局与策略
-- **变更排序策略**：将 `verticalListSortingStrategy` 替换为 `rectSortingStrategy`，以支持网格二维拖拽排序。
-- **变更容器样式**：将单据列表的外层容器从 `<div className="flex flex-col gap-2">` 改为 `<div className="grid grid-cols-4 gap-2">`。
+需要在 Supabase 中为 `global_products` 表增加一个 `is_hidden` 字段。
+**执行脚本 (`supabase-migration-v3.sql`)**:
 
-### 3.2 重写 `SortableTicketItem` 组件
-- 移除原有的水平 Flex 布局，采用与 Dashboard 完全一致的卡片设计（52px 高度，圆角、状态角标在右上角，序号在左上角）。
-- 取消显式的拖拽手柄，将 `attributes` 和 `listeners` 绑定到整个卡片上，使整个卡片可拖拽。
-- 移除卡片内部的“编辑”和“删除”按钮图标。
-- 添加 `onClick` 回调，用于触发弹窗。
+```sql
+ALTER TABLE global_products ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT false;
+```
 
-### 3.3 增加点击操作弹窗 (Action Dialog)
-- 引入新的状态 `const [selectedTicketAction, setSelectedTicketAction] = useState<Ticket | null>(null);`。
-- 当用户点击网格卡片时，由于 `@dnd-kit` 的 `PointerSensor` 设置了 `activationConstraint: { distance: 5 }`，单纯的点击事件不会触发拖拽，可以正常执行 `onClick` 并弹出“单据操作”弹窗。
-- 弹窗内展示单据的成本价，并提供两个明显的操作按钮：
-  - **修改成本价**：点击后关闭当前操作弹窗，并打开现有的 `editTicketCost` 弹窗。
-  - **删除单据**：点击后关闭当前操作弹窗，并打开现有的 `deleteConfirm` 弹窗。
+## 3. 具体修改步骤
 
-## 4. 假设与决策 (Assumptions & Decisions)
-- **无核销按钮**：根据之前设定的规则，“库存”页面不需要核销功能，因此新卡片中遇到 `sold_pending`（已售待使用）状态时，仅在右下角简单标记文字即可，无需添加核销按钮。
-- **拖拽与点击兼容**：`@dnd-kit` 的传感器配置已经考虑了点击与拖拽的冲突（拖动距离大于 5px 才会判定为拖拽），因此将整个卡片设为可拖拽不会影响点击弹出操作栏的体验。
+### 3.1 次日自动核销机制
 
-## 5. 验证步骤 (Verification steps)
-1. 进入“库存”页面，展开任意包含单据的平台和商品。
-2. 验证单据列表是否已变为一行4个的网格布局，样式是否与看板页面一致。
-3. 尝试拖拽任意卡片改变其排序，验证网格二维排序是否正常工作并保存。
-4. 单击任意卡片，验证是否能正常弹出操作弹窗。
-5. 在弹窗中点击“修改成本价”和“删除单据”，验证现有的业务逻辑是否被正确触发。
+* **新建工具函数** **`src/lib/autoWriteOff.ts`**:
+  编写一个自动化脚本，查找所有状态为 `sold_pending` (售出待使用) 的单据，并关联 `sales` 表查询其 `sold_at`。
+  如果 `sold_at` 小于今天 (即“次日”或更早)，则自动将该单据的 status 更新为 `used` (核销)。
+
+* **触发时机**:
+  在 `Dashboard.tsx` 和 `Tickets.tsx` 组件挂载并获取数据 (`fetchDashboardData` / `fetchData`) 的前夕触发此函数，保证用户看到的数据永远是已自动核销过的最新状态。
+
+### 3.2 商品隐藏功能
+
+* **类型定义更新**: 在 `src/types/index.ts` 中为 `GlobalProduct` 增加 `is_hidden: boolean` 属性。
+
+* **看板交互 (`Dashboard.tsx`)**:
+
+  * 在商品概览卡片上，增加一个“隐藏/显示” (EyeOff / Eye) 切换按钮。
+
+  * 当商品被设置为隐藏时，卡片整体增加灰色遮罩 (`grayscale opacity-60` 或 `bg-gray-100`)。
+
+  * 点击按钮时，调用 Supabase API 更新 `global_products` 表的 `is_hidden` 状态。
+
+* **库存过滤 (`Tickets.tsx`)**:
+
+  * 在渲染商品 AccordionContent 时，过滤掉 `is_hidden === true` 的商品，使其无法在库存页展示，从而禁止为其新增价格单据。
+
+### 3.3 单据卡片 UI 极简压缩
+
+* **网格列数调整**:
+
+  * `Dashboard.tsx` 的售出弹窗网格由 `grid-cols-4` 改为 `grid-cols-5`。
+
+  * `Tickets.tsx` 的单据网格由 `grid-cols-4` 改为 `grid-cols-5`。
+
+* **尺寸和字体压缩**:
+
+  * 卡片高度由 `h-[52px]` 减半为 `h-[28px]`。
+
+  * 价格文字字体调整为 `text-[10px]` 或 `text-[11px]`。
+
+  * 左上角的序号字体缩小。
+
+  * 右上角的待售/预约角标整体按比例缩小以适应狭窄的高度。
+
+* **移除手动核销**:
+
+  * `Dashboard.tsx` 中售出待使用单据不再渲染“核销”按钮。
+
+  * 单据仅保持纯灰色状态 (`sold_pending` 样式)，等待次日自动核销。
+
+## 4. 验收标准
+
+1. 在 Supabase 成功增加 `is_hidden` 字段后，可以隐藏/显示看板中的商品。隐藏的商品不会在库存列表中出现。
+2. 两个界面的单据卡片均显示为一行5个，且高度和字体明显变小。
+3. 售出的单据没有核销按钮，且在第二天刷新页面时自动从“售出待使用”变为不可见的“已核销”状态。
+
