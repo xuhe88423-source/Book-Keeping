@@ -136,8 +136,16 @@ export function Dashboard() {
     try {
       const { error } = await supabase.from('global_products').update({ is_hidden: !currentHidden }).eq('id', productId);
       if (error) throw error;
-      toast.success(currentHidden ? '已取消隐藏' : '已隐藏');
-      fetchDashboardData(false);
+      
+      // Update local state instantly for immediate visual feedback
+      setData(prev => ({
+        ...prev,
+        globalProducts: prev.globalProducts.map(p => 
+          p.id === productId ? { ...p, is_hidden: !currentHidden } : p
+        )
+      }));
+      
+      toast.success(!currentHidden ? '已隐藏' : '已取消隐藏');
     } catch (error: any) {
       toast.error('操作失败: ' + error.message);
     } finally {
@@ -539,7 +547,7 @@ export function Dashboard() {
             {/* Visible Products */}
             {data.globalProducts.filter(p => !p.is_hidden).length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                {data.globalProducts.filter(p => !p.is_hidden).map((stat, i) => {
+                {data.globalProducts.filter(p => !p.is_hidden).map((stat) => {
                   const theme = getPlatformTheme(stat.originalIndex);
                   return (
                   <div 
@@ -590,7 +598,7 @@ export function Dashboard() {
             {data.globalProducts.filter(p => p.is_hidden).length > 0 && (
               <div className="pt-2 border-t border-dashed border-gray-200/80">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 mt-3">
-                  {data.globalProducts.filter(p => p.is_hidden).map((stat, i) => {
+                  {data.globalProducts.filter(p => p.is_hidden).map((stat) => {
                     return (
                     <div 
                       key={stat.id} 
