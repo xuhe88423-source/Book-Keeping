@@ -19,67 +19,32 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { autoWriteOffTickets } from '@/lib/autoWriteOff';
 
-function SortableTicketItem({ ticket, onClick }: any) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: ticket.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    touchAction: 'pan-y' as const,
-  };
-
+function TicketItem({ ticket, onClick }: any) {
   let baseClass = 'bg-white border-gray-100 hover:border-primary/30 shadow-sm';
   if (ticket.status === 'sold_pending') {
     baseClass = 'bg-gray-50/80 border-gray-200 opacity-90';
   }
 
   return (
-        <div 
-          ref={setNodeRef} 
-          style={style} 
-          {...attributes} 
-          {...listeners} 
-          className={`relative flex flex-col items-center justify-center rounded-lg p-0 cursor-pointer border-2 transition-all ${baseClass} h-[26px]`}
-          onClick={() => onClick(ticket)}
-        >
-          {/* 状态角标 (待售 / 预约) */}
-          {ticket.status === 'active' && (
-            <div className="absolute -top-2.5 -right-2 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
-              待售
-            </div>
-          )}
-          {ticket.status === 'reserved' && (
-            <div className="absolute -top-2.5 -right-2 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
-              预约
-            </div>
-          )}
+    <div 
+      className={`relative flex flex-col items-center justify-center rounded-lg p-0 cursor-pointer border-2 transition-all ${baseClass} h-[26px]`}
+      onClick={() => onClick(ticket)}
+    >
+      {/* 状态角标 (待售 / 预约) */}
+      {ticket.status === 'active' && (
+        <div className="absolute -top-2.5 -right-2 bg-emerald-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
+          待售
+        </div>
+      )}
+      {ticket.status === 'reserved' && (
+        <div className="absolute -top-2.5 -right-2 bg-purple-500 text-white text-[8px] font-bold px-1 py-px rounded shadow-sm transform rotate-12 z-10 scale-75 origin-bottom-right">
+          预约
+        </div>
+      )}
 
       {/* 价格显示 */}
       <div className="flex items-center justify-center w-full">
@@ -123,22 +88,7 @@ export function Tickets() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+
 
   useEffect(() => {
     if (expandedPlatforms !== null) {
@@ -285,46 +235,7 @@ export function Tickets() {
     }
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
 
-    const activeTicket = tickets.find(t => t.id === active.id);
-    if (!activeTicket) return;
-
-    const platformId = activeTicket.platform_id;
-    const productId = activeTicket.global_product_id;
-
-    const ptTickets = tickets
-      .filter(t => t.platform_id === platformId && t.global_product_id === productId && t.status !== 'used')
-      .sort((a, b) => a.sort_order - b.sort_order);
-
-    const oldIndex = ptTickets.findIndex(item => item.id === active.id);
-    const newIndex = ptTickets.findIndex(item => item.id === over.id);
-
-    const newPtTickets = arrayMove(ptTickets, oldIndex, newIndex);
-
-    const updates = newPtTickets.map((t, index) => ({
-      id: t.id,
-      sort_order: index
-    }));
-
-    setTickets(prev => prev.map(t => {
-      const update = updates.find(u => u.id === t.id);
-      if (update) {
-        return { ...t, sort_order: update.sort_order };
-      }
-      return t;
-    }));
-
-    try {
-      await Promise.all(updates.map(update => 
-        supabase.from('tickets').update({ sort_order: update.sort_order }).eq('id', update.id)
-      ));
-    } catch(err) {
-      console.error('Failed to update sort order', err);
-    }
-  }
 
   const getPlatformTotalQuantity = (platformId: string) => {
     // 只有未售出状态的才算作有效库存数量
@@ -469,26 +380,15 @@ export function Tickets() {
                           {ptTickets.length === 0 ? (
                             <div className="text-center py-3 text-xs text-gray-400">暂无具体单据记录</div>
                           ) : (
-                            <DndContext 
-                              sensors={sensors}
-                              collisionDetection={closestCenter}
-                              onDragEnd={handleDragEnd}
-                            >
-                              <SortableContext 
-                                items={ptTickets.map(t => t.id)}
-                                strategy={rectSortingStrategy}
-                              >
-                                <div className="grid grid-cols-5 gap-x-2 gap-y-1.5">
-                                  {ptTickets.map((ticket) => (
-                                    <SortableTicketItem 
-                                      key={ticket.id} 
-                                      ticket={ticket} 
-                                      onClick={(t: Ticket) => setSelectedTicketAction(t)}
-                                    />
-                                  ))}
-                                </div>
-                              </SortableContext>
-                            </DndContext>
+                            <div className="grid grid-cols-5 gap-x-2 gap-y-1.5">
+                              {ptTickets.map((ticket) => (
+                                <TicketItem 
+                                  key={ticket.id} 
+                                  ticket={ticket} 
+                                  onClick={(t: Ticket) => setSelectedTicketAction(t)}
+                                />
+                              ))}
+                            </div>
                           )}
                         </div>
                       );
